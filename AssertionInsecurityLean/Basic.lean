@@ -69,15 +69,38 @@ noncomputable def TermMonotonicity (X Y: TermSet) : ∀   (t: Term), (dy X t) �
 --   by
 --     cases proof with
 
--- inductive normalProof: ∀ {X: TermSet} {t: Term}, dy X t → Prop
--- | ax {X: TermSet} {t: Term} (inH:  t ∈ X) : normalProof (dy.ax inH)
--- | pk {X: TermSet} {k: Name} {kH: dy X (Term.key (Key.priv k))} (kN: normalProof kH) 
---      : normalProof (dy.pk kH)
--- | pair {X: TermSet} {t1 t2: Term} {tH: dy X t1} {uH: dy X t2} 
---      (tN: normalProof tH) (uN: normalProof uH)
---      : normalProof (dy.pair tH uH)
--- | senc {X: TermSet} {t: Term} {k: Name} {tH: dy X t} {kH: dy X (Term.key (Key.priv k))} (tN: normalProof tH) (kN: normalProof kH): normalProof (dy.senc tH kH)
--- | aenc {X: TermSet} {t: Term} {k: Name} {tH: dy X t} {kH: dy X (Term.key (Key.pub k))} (tN: normalProof tH) (kN: normalProof kH): normalProof (dy.aenc tH kH)
+inductive NormalProof: ∀ {X: TermSet} {t: Term}, dy X t → Prop
+| ax {X: TermSet} {t: Term} (inH:  t ∈ X) : NormalProof (dy.ax inH)
+| pk {X: TermSet} {k: Name} {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) 
+     : NormalProof (dy.pk kH)
+| pair {X: TermSet} {t1 t2: Term} {tH: dy X t1} {uH: dy X t2} 
+     (tN: NormalProof tH) (uN: NormalProof uH)
+     : NormalProof (dy.pair tH uH)
+| senc {X: TermSet} {t: Term} {k: Name} {tH: dy X t} {kH: dy X (Term.key (Key.priv k))} (tN: NormalProof tH) (kN: NormalProof kH): NormalProof (dy.senc tH kH)
+| aenc {X: TermSet} {t: Term} {k: Name} {tH: dy X t} {kH: dy X (Term.key (Key.pub k))} (tN: NormalProof tH) (kN: NormalProof kH): NormalProof (dy.aenc tH kH)
+
+| splitL_splitL {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair (Term.pair t₁ t₂) t₃)} (pN: NormalProof pH): NormalProof (dy.splitL (dy.splitL pH))
+| splitL_splitR {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair t₃ (Term.pair t₁ t₂))} (pN: NormalProof pH): NormalProof (dy.splitL (dy.splitR pH))
+| splitL_sdec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₁ t₂) (Key.priv k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitL (dy.sdec pH kH))
+| splitL_adec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₁ t₂) (Key.pub k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitL (dy.adec pH kH))
+
+| splitR_splitL {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair (Term.pair t₂ t₁) t₃)} (pN: NormalProof pH): NormalProof (dy.splitR (dy.splitL pH))
+| splitR_splitR {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair t₃ (Term.pair t₂ t₁))} (pN: NormalProof pH): NormalProof (dy.splitR (dy.splitR pH))
+| splitR_sdec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₂ t₁) (Key.priv k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitR (dy.sdec pH kH))
+| splitR_adec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₂ t₁) (Key.pub k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitR (dy.adec pH kH))
+
+| sdec_splitL {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair (Term.enc t₁ (Key.priv k)) t₂)} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.sdec (dy.splitL pH) kH)
+| sdec_splitR {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair t₂ (Term.enc t₁ (Key.priv k)))} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.sdec (dy.splitR pH) kH)
+| sdec_sdec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.priv k₁)) (Key.priv k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.sdec (dy.sdec pH k₂H) k₁H)
+| sdec_adec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.priv k₁)) (Key.pub k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.sdec (dy.adec pH k₂H) k₁H)
+
+| adec_splitL {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair (Term.enc t₁ (Key.pub k)) t₂)} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.adec (dy.splitL pH) kH)
+| adec_splitR {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair t₂ (Term.enc t₁ (Key.pub k)))} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.adec (dy.splitR pH) kH)
+| adec_sdec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.pub k₁)) (Key.priv k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.adec (dy.sdec pH k₂H) k₁H)
+| adec_adec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.pub k₁)) (Key.pub k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.adec (dy.adec pH k₂H) k₁H)
+
+
+
 
 @[simp]
 def isNormal {X: TermSet} {t: Term} (proof: dy X t): Bool :=
@@ -154,6 +177,46 @@ def dyProofRewrite {X: TermSet} {t: Term} (proof: dy X t): dy X t :=
               | _ => proof
   | _ => proof
 
+inductive RewriteBigStep: ∀ {X: TermSet} {t: Term}, dy X t -> dy X t -> Prop
+| ax {X: TermSet} {t: Term} (inH:  t ∈ X) : RewriteBigStep (dy.ax inH) (dy.ax inH)
+| pk {X: TermSet} {k: Name} {kH kH': dy X (Term.key (Key.priv k))} (kN: RewriteBigStep kH kH') 
+     : RewriteBigStep (dy.pk kH) (dy.pk kH')
+| pair {X: TermSet} {t₁ t₂: Term} {tH tH': dy X t₁} {uH uH': dy X t₂} 
+     (tN: RewriteBigStep tH tH') (uN: RewriteBigStep uH uH')
+     : RewriteBigStep (dy.pair tH uH) (dy.pair tH' uH')
+| senc {X: TermSet} {t: Term} {k: Name} {tH tH': dy X t} {kH kH': dy X (Term.key (Key.priv k))} (tN: RewriteBigStep tH tH') (kN: RewriteBigStep kH kH'): RewriteBigStep (dy.senc tH kH) (dy.senc tH' kH')
+| aenc {X: TermSet} {t: Term} {k: Name} {tH tH': dy X t} {kH kH': dy X (Term.key (Key.pub k))} (tN: RewriteBigStep tH tH') (kN: RewriteBigStep kH kH'): RewriteBigStep (dy.aenc tH kH) (dy.aenc tH' kH')
+
+| splitL_splitL {X: TermSet} {t₁ t₂ t₃: Term} {pH pH' : dy X (Term.pair (Term.pair t₁ t₂) t₃)} (pN: RewriteBigStep pH pH'): RewriteBigStep (dy.splitL (dy.splitL pH)) (dy.splitL (dy.splitL pH'))
+| splitL_splitR {X: TermSet} {t₁ t₂ t₃: Term} {pH pH': dy X (Term.pair t₃ (Term.pair t₁ t₂))} (pN: RewriteBigStep pH pH'): RewriteBigStep (dy.splitL (dy.splitR pH)) (dy.splitL (dy.splitR pH'))
+| splitL_sdec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH kH': dy X (Term.key (Key.priv k))} {pH pH': dy X (Term.enc (Term.pair t₁ t₂) (Key.priv k))} (pN: RewriteBigStep pH pH') (kN: RewriteBigStep kH kH'): RewriteBigStep (dy.splitL (dy.sdec pH kH)) (dy.splitL (dy.sdec pH' kH'))
+| splitL_adec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH kH': dy X (Term.key (Key.priv k))} {pH pH': dy X (Term.enc (Term.pair t₁ t₂) (Key.pub k))} (pN: RewriteBigStep pH pH') (kN: RewriteBigStep kH kH'): RewriteBigStep (dy.splitL (dy.adec pH kH)) (dy.splitL (dy.adec pH' kH'))
+| splitL_pair {X: TermSet} {t₁ t₂: Term} {tH tH': dy X t₁} {uH uH': dy X t₂} 
+     (tN: RewriteBigStep tH tH') (uN: RewriteBigStep uH uH')
+  : RewriteBigStep (dy.splitL (dy.pair tH uH)) tH'
+
+
+
+| splitR_splitL {X: TermSet} {t₁ t₂ t₃: Term} {pH pH': dy X (Term.pair (Term.pair t₂ t₁) t₃)} (pN: RewriteBigStep pH pH'): RewriteBigStep (dy.splitR (dy.splitL pH)) (dy.splitR (dy.splitL pH'))
+| splitR_splitR {X: TermSet} {t₁ t₂ t₃: Term} {pH pH': dy X (Term.pair t₃ (Term.pair t₂ t₁))} (pN: RewriteBigStep pH pH'): RewriteBigStep (dy.splitR (dy.splitR pH)) (dy.splitR (dy.splitR pH'))
+| splitR_sdec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH kH': dy X (Term.key (Key.priv k))} {pH pH': dy X (Term.enc (Term.pair t₂ t₁) (Key.priv k))} (pN: RewriteBigStep pH pH') (kN: RewriteBigStep kH kH'): RewriteBigStep (dy.splitR (dy.sdec pH kH)) (dy.splitR (dy.sdec pH' kH'))
+| splitR_adec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH kH': dy X (Term.key (Key.priv k))} {pH pH': dy X (Term.enc (Term.pair t₂ t₁) (Key.pub k))} (pN: RewriteBigStep pH pH') (kN: RewriteBigStep kH kH'): RewriteBigStep (dy.splitR (dy.adec pH kH)) (dy.splitR (dy.adec pH' kH'))
+| splitR_pair {X: TermSet} {t₁ t₂: Term} {tH tH': dy X t₁} {uH uH': dy X t₂} 
+     (tN: RewriteBigStep tH tH') (uN: RewriteBigStep uH uH')
+  : RewriteBigStep (dy.splitR (dy.pair tH uH)) uH'
+
+| sdec_splitL {X: TermSet} {t₁ t₂: Term} {k: Name} {pH pH': dy X (Term.pair (Term.enc t₁ (Key.priv k)) t₂)} (pN: RewriteBigStep pH pH') {kH kH': dy X (Term.key (Key.priv k))} (kN: RewriteBigStep kH kH') : RewriteBigStep (dy.sdec (dy.splitL pH ) kH ) (dy.sdec (dy.splitL pH') kH')
+| sdec_splitR {X: TermSet} {t₁ t₂: Term} {k: Name} {pH pH': dy X (Term.pair t₂ (Term.enc t₁ (Key.priv k)))} (pN: RewriteBigStep pH pH') {kH kH': dy X (Term.key (Key.priv k))} (kN: RewriteBigStep kH kH') : RewriteBigStep (dy.sdec (dy.splitR pH) kH) (dy.sdec (dy.splitR pH') kH')
+| sdec_sdec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH pH': dy X (Term.enc (Term.enc t (Key.priv k₁)) (Key.priv k₂))} {k₁H k₁H': dy X (Term.key (Key.priv k₁))} {k₂H k₂H': dy X (Term.key (Key.priv k₂))} (pN: RewriteBigStep pH pH') (k₁N: RewriteBigStep k₁H k₁H') (k₂N: RewriteBigStep k₂H k₂H') : RewriteBigStep (dy.sdec (dy.sdec pH k₂H) k₁H) (dy.sdec (dy.sdec pH' k₂H') k₁H')
+| sdec_adec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH pH': dy X (Term.enc (Term.enc t (Key.priv k₁)) (Key.pub k₂))} {k₁H k₁H': dy X (Term.key (Key.priv k₁))} {k₂H k₂H': dy X (Term.key (Key.priv k₂))} (pN: RewriteBigStep pH pH') (k₁N: RewriteBigStep k₁H k₁H') (k₂N: RewriteBigStep k₂H k₂H') : RewriteBigStep (dy.sdec (dy.adec pH  k₂H ) k₁H ) (dy.sdec (dy.adec pH' k₂H' ) k₁H')
+| sdec_senc {X: TermSet} {t: Term} {k: Name} {tH tH': dy X t} {k₁H k₁H': dy X (Term.key (Key.priv k))} {k₂H k₂H': dy X (Term.key (Key.priv k))} (tN: RewriteBigStep tH tH') (k₁N: RewriteBigStep k₁H k₁H') (k₂N: RewriteBigStep k₂H k₂H'): RewriteBigStep (dy.sdec (dy.senc tH k₁H) k₂H) tH'
+
+| adec_splitL {X: TermSet} {t₁ t₂: Term} {k: Name} {pH pH': dy X (Term.pair (Term.enc t₁ (Key.pub k)) t₂)} (pN: RewriteBigStep pH pH') {kH kH': dy X (Term.key (Key.priv k))} (kN: RewriteBigStep kH kH') : RewriteBigStep (dy.adec (dy.splitL pH ) kH ) (dy.adec (dy.splitL pH' ) kH' )
+| adec_splitR {X: TermSet} {t₁ t₂: Term} {k: Name} {pH pH': dy X (Term.pair t₂ (Term.enc t₁ (Key.pub k)))} (pN: RewriteBigStep pH pH') {kH kH': dy X (Term.key (Key.priv k))} (kN: RewriteBigStep kH kH') : RewriteBigStep (dy.adec (dy.splitR pH ) kH ) (dy.adec (dy.splitR pH' ) kH' )
+| adec_sdec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH pH': dy X (Term.enc (Term.enc t (Key.pub k₁)) (Key.priv k₂))} {k₁H k₁H': dy X (Term.key (Key.priv k₁))} {k₂H k₂H': dy X (Term.key (Key.priv k₂))} (pN: RewriteBigStep pH pH') (k₁N: RewriteBigStep k₁H k₁H') (k₂N: RewriteBigStep k₂H k₂H') : RewriteBigStep (dy.adec (dy.sdec pH  k₂H ) k₁H ) (dy.adec (dy.sdec pH'  k₂H' ) k₁H' )
+| adec_adec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH pH': dy X (Term.enc (Term.enc t (Key.pub k₁)) (Key.pub k₂))} {k₁H k₁H': dy X (Term.key (Key.priv k₁))} {k₂H k₂H': dy X (Term.key (Key.priv k₂))} (pN: RewriteBigStep pH pH') (k₁N: RewriteBigStep k₁H k₁H') (k₂N: RewriteBigStep k₂H k₂H') : RewriteBigStep (dy.adec (dy.adec pH  k₂H ) k₁H ) (dy.adec (dy.adec pH'  k₂H' ) k₁H' )
+| adec_aenc {X: TermSet} {t: Term} {k: Name} {tH tH': dy X t} {k₁H k₁H': dy X (Term.key (Key.pub k))} {k₂H k₂H': dy X (Term.key (Key.priv k))} (tN: RewriteBigStep tH tH') (k₁N: RewriteBigStep k₁H k₁H') (k₂N: RewriteBigStep k₂H k₂H'): RewriteBigStep (dy.adec (dy.aenc tH k₁H) k₂H) tH'
+
 @[simp]
 lemma dyProofRewriteSmaller: ∀ {X: TermSet} {t: Term} (proof: dy X t), 
   dyProofMeasure (dyProofRewrite proof) ≤ dyProofMeasure proof :=
@@ -220,59 +283,55 @@ lemma repeatRight: ∀ {A: Type} (n: Nat) (f: A -> A) (a: A), repeat_apply (n + 
            rw [iHn]
          
 
-theorem rewriterFixpoint: ∀ {X: TermSet} {t: Term} (p: dy X t),∃ (n: Nat), repeat_apply n recursiveDyProofRewriter p = 
-repeat_apply (n + 1) recursiveDyProofRewriter p :=
-  by
-    intros X t p
-    induction p with
-    | ax inH =>
-         apply Exists.intro 0
-         simp
-
-    | pk kH kH_iH =>
-         cases kH_iH with
-         | intro x iHx =>
-           rw [repeatRight] at iHx
-           apply Exists.intro x
-           rw [repeatRight]
-           simp
-           sorry
-    
-         -- cases kH_iH with
-         -- | intro x xH =>
-         --   apply Exists.intro (x + 1)
-         --   rw [repeatRight, repeatRight]
-         --   simp
-         --   simp at xH
-         --   sorry
-    | splitL splitH splitH_ih =>
-             simp
-             sorry
-    | _ => sorry
--- theorem rewriterNormaliser: ∀ {X: TermSet} {t: Term} (p: dy X t), isNormal (recursiveDyProofRewriter p) = true :=
+-- theorem rewriterFixpoint: ∀ {X: TermSet} {t: Term} (p: dy X t),∃ (n: Nat), repeat_apply n recursiveDyProofRewriter p = 
+-- repeat_apply (n + 1) recursiveDyProofRewriter p :=
 --   by
 --     intros X t p
 --     induction p with
---     | ax inH => 
+--     | ax inH =>
+--          apply Exists.intro 0
 --          simp
---     | pk kH kH_ih =>
---              simp
---              assumption
+
+--     | pk kH kH_iH =>
+--          cases kH_iH with
+--          | intro x iHx =>
+--            rw [repeatRight] at iHx
+--            apply Exists.intro x
+--            rw [repeatRight]
+--            simp
+--            sorry
+    
+--          -- cases kH_iH with
+--          -- | intro x xH =>
+--          --   apply Exists.intro (x + 1)
+--          --   rw [repeatRight, repeatRight]
+--          --   simp
+--          --   simp at xH
+--          --   sorry
 --     | splitL splitH splitH_ih =>
 --              simp
---              cases eqn : (recursiveDyProofRewriter splitH)  with    
---              | pair tH uH => 
---                     rw [eqn] at splitH_ih
---                     simp
---                     simp at splitH_ih
---                     cases splitH_ih with
---                     | intro left right => assumption
---              | ax inH =>
---                     simp
---              | splitL splitH =>
---                     rw [eqn] at splitH_ih
---                     simp
---                     unfold isNormal at splitH_ih
---                     simp at splitH_ih
-    
---     sorry
+--              sorry
+--     | _ => sorry
+theorem rewriterNormaliser: ∀ {X: TermSet} {t: Term} (p p': dy X t), RewriteBigStep p p' → NormalProof p' :=
+  by
+    intros X t p p' RW
+    induction RW 
+    any_goals (constructor <;> assumption)
+    all_goals (assumption)
+
+theorem rewriteCompute: ∀ {X: TermSet} {t: Term} (p: dy X t), RewriteBigStep p (recursiveDyProofRewriter p) :=
+  by
+    intros X t p
+    induction p with
+    | ax => simp ; constructor
+    | pair => simp ; constructor <;> assumption
+    | senc => simp ; constructor <;> assumption
+    | aenc => simp ; constructor <;> assumption
+    | pk => simp ; constructor; assumption
+    | splitL =>
+      
+      sorry
+
+      
+    | _ => sorry
+      
