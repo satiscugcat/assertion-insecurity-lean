@@ -477,46 +477,30 @@ inductive NormalProof: ∀ {X: TermSet} {t: Term}, dy X t → Prop
 
 
 
-@[simp]
-def isNormal {X: TermSet} {t: Term} (proof: dy X t): Bool :=
+
+def isNormalDy {X: TermSet} {t: Term} (proof: dy X t): Bool :=
     match proof with
     | dy.ax _ =>  true
-    | dy.pk kH =>  (isNormal kH)
+    | dy.pk kH =>  (isNormalDy kH)
     | dy.splitL splitH =>            
                     match splitH with
-                    | dy.ax _ =>  true
-                    | dy.splitL splitH =>  isNormal splitH 
-                    | dy.splitR splitH =>  isNormal splitH
-                    | dy.sdec kH encH =>  isNormal kH && isNormal encH
-                    | dy.adec kH encH =>  isNormal kH && isNormal encH
                     | dy.pair _ _ =>  false
+                    | _ => isNormalDy splitH
     | dy.splitR splitH =>            
                     match splitH with
-                    | dy.ax _ =>  true
-                    | dy.splitL splitH =>  isNormal splitH 
-                    | dy.splitR splitH =>  isNormal splitH
-                    | dy.sdec kH encH =>  isNormal kH && isNormal encH
-                    | dy.adec kH encH =>  isNormal kH && isNormal encH
                     | dy.pair _ _ =>  false
-    | dy.pair tH uH =>  isNormal tH && isNormal uH
-    | dy.senc tH kH =>  isNormal tH && isNormal kH
-    | dy.aenc tH kH =>  isNormal tH && isNormal kH
-    | dy.sdec encH kH => isNormal kH &&
+                    | _ => isNormalDy splitH
+    | dy.pair tH uH =>  isNormalDy tH && isNormalDy uH
+    | dy.senc tH kH =>  isNormalDy tH && isNormalDy kH
+    | dy.aenc tH kH =>  isNormalDy tH && isNormalDy kH
+    | dy.sdec encH kH => isNormalDy kH &&
                       match encH with
-                      | dy.ax _ =>  true
-                      | dy.splitL splitH =>  isNormal splitH 
-                      | dy.splitR splitH =>  isNormal splitH
-                      | dy.sdec kH encH =>  isNormal kH && isNormal encH
-                      | dy.adec kH encH =>  isNormal kH && isNormal encH
                       | dy.senc _ _ =>  false
-    | dy.adec encH kH => isNormal kH &&
+                      | _ => isNormalDy encH
+    | dy.adec encH kH => isNormalDy kH &&
                       match encH with
-                      | dy.ax _ =>  true
-                      | dy.splitL splitH =>  isNormal splitH 
-                      | dy.splitR splitH =>  isNormal splitH
-                      | dy.sdec kH encH =>  isNormal kH && isNormal encH
-                      | dy.adec kH encH =>  isNormal kH && isNormal encH
                       | dy.aenc _ _ =>  false
+                      | _ => isNormalDy encH
 @[simp]
 def dyProofMeasure {X: TermSet} {t: Term} (proof: dy X t): Nat := 
       1 +
@@ -660,10 +644,65 @@ lemma repeatRight: ∀ {A: Type} (n: Nat) (f: A -> A) (a: A), repeat_apply (n + 
            simp at iHn
            rw [iHn]
          
-theorem rewriterNormaliserFun: ∀ {X: TermSet} {t: Term} (p: dy X t), isNormal (recursiveDyProofRewriter p) = true :=
-  by
-    
-    sorry
+theorem rewriterNormaliserFun: ∀ {X: TermSet} {t: Term} (p: dy X t), isNormalDy (recursiveDyProofRewriter p) = true :=
+   by
+    intros X t p
+    induction p with
+    | ax => simp [isNormalDy]
+    | pk => simp ; assumption
+    | splitL splitH splitH_iH =>
+      simp
+      cases E: recursiveDyProofRewriter splitH
+      any_goals  (simp ; unfold isNormalDy ; simp <;> rw [← E] <;> assumption)
+      case splitL.pair tH uH =>
+        simp
+        rw [E] at splitH_iH
+        unfold isNormalDy at splitH_iH
+        simp at splitH_iH
+        apply And.left splitH_iH
+    | splitR splitH splitH_iH =>
+      simp
+      cases E: recursiveDyProofRewriter splitH
+      any_goals  (simp ; unfold isNormalDy ; simp <;> rw [← E] <;> assumption)
+      case splitR.pair tH uH =>
+        simp
+        rw [E] at splitH_iH
+        unfold isNormalDy at splitH_iH
+        simp at splitH_iH
+        apply And.right splitH_iH
+    | pair tH uH tH_iH uH_iH =>
+      unfold isNormalDy
+      simp
+      apply And.intro tH_iH uH_iH
+    | sdec encH kH encH_iH kH_iH =>
+      simp
+      cases E: recursiveDyProofRewriter encH   
+      any_goals (simp ; unfold isNormalDy ; simp <;> rw [← E] <;> apply And.intro <;> assumption)
+      case sdec.senc kH =>
+        simp
+        rw [E] at encH_iH
+        unfold isNormalDy at encH_iH
+        simp at encH_iH
+        apply And.left encH_iH
+
+    | adec encH kH encH_iH kH_iH =>
+      simp
+      cases E: recursiveDyProofRewriter encH   
+      any_goals (simp ; unfold isNormalDy ; simp <;> rw [← E] <;> apply And.intro <;> assumption)
+      case adec.aenc kH =>
+        simp
+        rw [E] at encH_iH
+        unfold isNormalDy at encH_iH
+        simp at encH_iH
+        apply And.left encH_iH
+    | aenc _ _ ih1 ih2 =>
+      unfold isNormalDy
+      simp
+      apply And.intro ih1 ih2
+    | senc _ _ ih1 ih2 =>
+      unfold isNormalDy
+      simp
+      apply And.intro ih1 ih2
 
 theorem rewriterNormaliser: ∀ {X: TermSet} {t: Term} (p p': dy X t), RewriteBigStep p p' → NormalProof p' :=
   by
@@ -703,16 +742,16 @@ def ProofTerms {X: TermSet} {t: Term} (p: dy X t) : TermSet :=
   | @dy.adec _ t' _ encH kH => {t'} ∪  (ProofTerms encH) ∪ (ProofTerms kH)
   | @dy.aenc _ t' k tH kH =>   {Term.enc t' (Key.pub k)} ∪  (ProofTerms tH) ∪ (ProofTerms kH)
 
-theorem SubTermProperty: forall (X: TermSet) (t: Term) (p: dy X t), ((isNormal p) = true)
-                                                                       -> match p  with
-                                                                          | dy.pair _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
-                                                                          | dy.senc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
-                                                                          | dy.aenc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
-                                                                          | dy.pk _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
-                                                                          | _ => ProofTerms p ⊆ SubTermSet X
-                                                                          :=
-        by
-          sorry
+-- theorem SubTermProperty: forall (X: TermSet) (t: Term) (p: dy X t), ((isNormalDy p) = true)
+--                                                                        -> match p  with
+--                                                                           | dy.pair _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+--                                                                           | dy.senc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+--                                                                           | dy.aenc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+--                                                                           | dy.pk _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+--                                                                           | _ => ProofTerms p ⊆ SubTermSet X
+--                                                                           :=
+--         by
+--           sorry
 
 
 inductive Assertion: Type
@@ -845,30 +884,30 @@ inductive eq_ady: TermSet -> AssertionSet -> Assertion -> Type
 
 | trans {S: TermSet} {A: AssertionSet} {t1 tk: Term} (p: Eq_Trans S A t1 tk): eq_ady S A (Assertion.eq t1 tk)
 
--- | proj_pair_left {S: TermSet} {A: AssertionSet} {t1 t2 u1 u2: Term} (p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))) (pin: [0,0] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))) ) : eq_ady S A (Assertion.eq t1 u1)
--- | proj_pair_right {S: TermSet} {A: AssertionSet} {t1 t2 u1 u2: Term} (p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))  (pin: [0,1] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))) ) : eq_ady S A (Assertion.eq t2 u2)
+| proj_pair_left {S: TermSet} {A: AssertionSet} {t1 t2 u1 u2: Term} (p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))) (pin: [0,0] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))) ) : eq_ady S A (Assertion.eq t1 u1)
+| proj_pair_right {S: TermSet} {A: AssertionSet} {t1 t2 u1 u2: Term} (p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))  (pin: [0,1] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))) ) : eq_ady S A (Assertion.eq t2 u2)
                                    
           
--- | proj_enc_term {S: TermSet} {A: AssertionSet} {k1 k2: Key} {t1 t2: Term} (p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) (pin: [0,0] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) ): eq_ady S A (Assertion.eq t1 t2)
--- | proj_enc_key {S: TermSet} {A: AssertionSet} {k1 k2: Key} {t1 t2: Term} (p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) (pin: [0,1] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) ): eq_ady S A (Assertion.eq ((Term.key k1)) (Term.key k2 ))
+| proj_enc_term {S: TermSet} {A: AssertionSet} {k1 k2: Key} {t1 t2: Term} (p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) (pin: [0,0] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) ): eq_ady S A (Assertion.eq t1 t2)
+| proj_enc_key {S: TermSet} {A: AssertionSet} {k1 k2: Key} {t1 t2: Term} (p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) (pin: [0,1] ∈ (AbstractablePositionSetAssertion S (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) ): eq_ady S A (Assertion.eq ((Term.key k1)) (Term.key k2 ))
 
--- | subst {S: TermSet} {A: AssertionSet} {t u: Term} {l: List Term} (proofMember: eq_ady S A (Assertion.member t l)) (proofEq: eq_ady S A (Assertion.eq t u)): eq_ady S A (Assertion.member u l)
+| subst {S: TermSet} {A: AssertionSet} {t u: Term} {l: List Term} (proofMember: eq_ady S A (Assertion.member t l)) (proofEq: eq_ady S A (Assertion.eq t u)): eq_ady S A (Assertion.member u l)
 
--- | prom {S: TermSet} {A: AssertionSet} {t n: Term} (proof: eq_ady S A (Assertion.member t [n])) : eq_ady S A (Assertion.eq t n)
+| prom {S: TermSet} {A: AssertionSet} {t n: Term} (proof: eq_ady S A (Assertion.member t [n])) : eq_ady S A (Assertion.eq t n)
 
--- | int {S: TermSet} {A: AssertionSet} {t: Term} {l: List Term} (premises: Eq_ValidIntPremiseList S A t l): eq_ady S A (Assertion.member t l)
--- | wk {S: TermSet} {A: AssertionSet} {t n: Term} {nlist: List Term} (proofEq: eq_ady S A (Assertion.eq t n)) (proofIn: n ∈ nlist) (proofValid: Eq_DerivableTermsList S nlist): eq_ady S A (Assertion.member t nlist)
+| int {S: TermSet} {A: AssertionSet} {t: Term} {l: List Term} (premises: Eq_Int S A t l): eq_ady S A (Assertion.member t l)
+| wk {S: TermSet} {A: AssertionSet} {t n: Term} {nlist: List Term} (proofEq: eq_ady S A (Assertion.eq t n)) (proofIn: n ∈ nlist) (proofValid: Eq_Wk S nlist): eq_ady S A (Assertion.member t nlist)
 
 inductive Eq_Trans: TermSet -> AssertionSet -> Term -> Term -> Type
 | two_trans {S: TermSet} {A: AssertionSet} {t1 t2 t3: Term} (p1: eq_ady S A (Assertion.eq t1 t2)) (p2: eq_ady S A (Assertion.eq t2 t3)): Eq_Trans S A t1 t3
 | trans_trans {S: TermSet} {A: AssertionSet} {t1 tk tk': Term} (phead: eq_ady S A (Assertion.eq t1 tk)) (plist: Eq_Trans S A tk tk'): Eq_Trans S A t1 tk'                                                           
--- inductive Eq_ValidIntPremiseList: TermSet -> AssertionSet -> Term -> List Term -> Type
--- | two_lists {S: TermSet} {A: AssertionSet} {t: Term} {l1 l2: List Term}  (proof1: eq_ady S A (Assertion.member t l1)) (proof2: eq_ady S A (Assertion.member t l2)): Eq_ValidIntPremiseList S A t (intersection l1 l2)
--- | new_list {S: TermSet} {A: AssertionSet} {t: Term} {l l': List Term} (proof1: eq_ady S A (Assertion.member t l)) (proof2: Eq_ValidIntPremiseList S A t l'): Eq_ValidIntPremiseList S A t (intersection l l')
+inductive Eq_Int: TermSet -> AssertionSet -> Term -> List Term -> Type
+| two_lists {S: TermSet} {A: AssertionSet} {t: Term} {l1 l2: List Term}  (proof1: eq_ady S A (Assertion.member t l1)) (proof2: eq_ady S A (Assertion.member t l2)): Eq_Int S A t (intersection l1 l2)
+| new_list {S: TermSet} {A: AssertionSet} {t: Term} {l l': List Term} (proof1: eq_ady S A (Assertion.member t l)) (proof2: Eq_Int S A t l'): Eq_Int S A t (intersection l l')
                                                                                                                                                                                                                                                                              
--- inductive Eq_DerivableTermsList: TermSet -> List Term -> Type
--- | single {S: TermSet} {t: Term} (proof: dy S t): Eq_DerivableTermsList S [t]
--- | new {S: TermSet} {t: Term} {tlist: List Term} (proofNew: dy S t) (proofList: Eq_DerivableTermsList S tlist): Eq_DerivableTermsList S (t::tlist)
+inductive Eq_Wk: TermSet -> List Term -> Type
+| single {S: TermSet} {t: Term} (proof: dy S t): Eq_Wk S [t]
+| new {S: TermSet} {t: Term} {tlist: List Term} (proofNew: dy S t) (proofList: Eq_Wk S tlist): Eq_Wk S (t::tlist)
 end
 
 
@@ -878,32 +917,378 @@ def isCons {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a) : Boo
   | eq_ady.cons_enc _ _ => Bool.true
   | _ => Bool.false
 
+mutual
+def containsCons {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): Bool :=
+  match proof with
+  | eq_ady.ax .. => false
+  | eq_ady.eq .. => false
+  | eq_ady.cons_pair .. => true
+  | eq_ady.cons_enc .. => true
+  | eq_ady.sym p => containsCons p
+  | eq_ady.trans plist => containsConsTrans plist
+  | eq_ady.proj_pair_left p pin => containsCons p
+  | eq_ady.proj_pair_right p pin => containsCons p
+  | eq_ady.proj_enc_key p pin => containsCons p
+  | eq_ady.proj_enc_term p pin => containsCons p
+  | eq_ady.subst p p' => containsCons p || containsCons p'
+  | eq_ady.prom p => containsCons p
+  | eq_ady.int premises => containsConsInt premises
+  | eq_ady.wk p _ _ => containsCons p
+def containsConsTrans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : Bool :=
+ match plist with
+ | Eq_Trans.two_trans eq1 eq2 => containsCons eq1 || containsCons eq2
+ | Eq_Trans.trans_trans phead plist => containsCons phead || containsConsTrans plist
+def containsConsInt {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : Bool :=
+  match premises with
+  | Eq_Int.two_lists x1 x2 => containsCons x1 || containsCons x2
+  | Eq_Int.new_list xhead xlist => containsCons xhead || containsConsInt xlist
+end
+
+def containsReflexiveTrans {S: TermSet} {A: AssertionSet} {a1 a2: Term} (l: Eq_Trans S A a1 a2): Bool :=
+    match l with
+    | @Eq_Trans.two_trans _ _ t1 t2 t3 .. => 
+      if Decidable.decide (t1 = t2) || Decidable.decide (t2 = t3) then true else false
+    | @Eq_Trans.trans_trans _ _ t1 t2 _ _ plist => if Decidable.decide (t1 = t2) || containsReflexiveTrans plist then true else false
+
+def  adjacentSafe {S: TermSet} {A: AssertionSet} {a1 a2: Term} (l: Eq_Trans S A a1 a2): Bool :=
+  match l with
+  | Eq_Trans.two_trans p1 p2 => !(isCons p1  && isCons p2)
+  | Eq_Trans.trans_trans phead ptail => 
+    adjacentSafe ptail &&
+    (!((isCons phead) &&  
+      match ptail with 
+      | Eq_Trans.two_trans p2 _ => (isCons p2) 
+      | Eq_Trans.trans_trans p2 _ => (isCons p2)))
+
+mutual
+  def isNormalEqAdy {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): Bool :=
+    match proof with
+    | eq_ady.ax .. => true
+    | eq_ady.eq _ p => isNormalDy p &&
+                       match p with
+                       | dy.pair _ _ => false
+                       | dy.senc _ _ => false
+                       | dy.aenc _ _ => false
+                       | dy.pk _ => false
+                       | _ => true
+    | eq_ady.cons_pair p1 p2 => isNormalEqAdy p1 && isNormalEqAdy p2
+    | eq_ady.cons_enc p1 p2 => isNormalEqAdy p1 && isNormalEqAdy p2
+    | eq_ady.sym p => isNormalEqAdy p &&
+                      match p with
+                      | eq_ady.ax .. => true
+                      | eq_ady.prom .. => true
+                      | _ => false
+    | eq_ady.trans plist => isNormalEqTrans plist && adjacentSafe plist && !(containsReflexiveTrans plist)
+    | eq_ady.proj_pair_left p _ => !(containsCons p) && isNormalEqAdy p
+    | eq_ady.proj_pair_right p _ => !(containsCons p) && isNormalEqAdy p
+    | eq_ady.proj_enc_key p _ => !(containsCons p) && isNormalEqAdy p
+    | eq_ady.proj_enc_term p _ => !(containsCons p) && isNormalEqAdy p
+    | eq_ady.subst p p' => isNormalEqAdy p && isNormalEqAdy p'
+    | eq_ady.prom p => isNormalEqAdy p
+    | eq_ady.int premises => isNormalEqInt premises 
+    | eq_ady.wk eqa _ dylist => isNormalEqAdy eqa && isNormalEqWk dylist
+  def isNormalEqTrans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : Bool :=
+    match plist with
+    | Eq_Trans.two_trans p1 p2 => isNormalEqAdy p1 && isNormalEqAdy p2
+    | Eq_Trans.trans_trans phead plist => isNormalEqAdy phead && isNormalEqTrans plist
+  def isNormalEqInt {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : Bool :=
+  let temp {S A a} (p: eq_ady S A a) :=
+    match p with | eq_ady.int .. => false | eq_ady.wk .. => false | _ => true
+    ;
+    match premises with
+    | Eq_Int.two_lists x1 x2 => isNormalEqAdy x1 && isNormalEqAdy x2 && temp x1 && temp x2
+    | Eq_Int.new_list xhead xlist => isNormalEqAdy xhead && temp xhead && isNormalEqInt xlist
+  def isNormalEqWk {S: TermSet} {ts: List Term} (l: Eq_Wk S ts): Bool :=
+    match l with
+    | Eq_Wk.single p => isNormalDy p
+    | Eq_Wk.new phead plist => isNormalDy phead && isNormalEqWk plist
+end
+mutual
+inductive SubProofEqEq: ∀ {S₁ S₂ A₁ A₂ a₁ a₂}, (eq_ady S₁ A₁ a₁) -> (eq_ady S₂ A₂ a₂) -> Prop
+| refl {S A a}
+    (pa: eq_ady S A a)
+  : SubProofEqEq pa pa
+
+| cons_pair_left {S A} {t1 t2 u1 u2: Term} (p1: eq_ady S A (Assertion.eq t1 u1)) (p2: eq_ady S A (Assertion.eq t2 u2)): SubProofEqEq p1 (eq_ady.cons_pair p1 p2)
+| cons_pair_right  {S A} {t1 t2 u1 u2: Term} (p1: eq_ady S A (Assertion.eq t1 u1)) (p2: eq_ady S A (Assertion.eq t2 u2)): SubProofEqEq p2 (eq_ady.cons_pair p1 p2)
+
+| cons_enc_term {S A} {t1 t2 : Term} {k1 k2 : Key}
+    (p1:eq_ady S A (Assertion.eq t1 t2))
+    (p2: eq_ady S A (Assertion.eq ((Term.key k1 )) (Term.key k2)))
+  : SubProofEqEq p1 (eq_ady.cons_enc p1 p2)
+| cons_enc_key {S A} {t1 t2 : Term} {k1 k2 : Key}
+    (p1:eq_ady S A (Assertion.eq t1 t2))
+    (p2: eq_ady S A (Assertion.eq ((Term.key k1)) (Term.key k2)))
+  : SubProofEqEq p2 (eq_ady.cons_enc p1 p2)
+
+| sym {S A} {t u: Term}
+    (p: eq_ady S A (Assertion.eq t u))
+  : SubProofEqEq p (eq_ady.sym p)
+
+| trans  {S A} {a: Assertion} {t1 tk : Term}
+    {p: Eq_Trans S A t1 tk}
+    {pa: eq_ady S A a}
+    (subp: SubProofEqTrans pa p)
+  : SubProofEqEq pa (eq_ady.trans p)
+
+| proj_pair_left {S A} {t1 t2 u1 u2 : Term}
+    (p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))
+    (p': [0,0] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))
+           )
+  : SubProofEqEq p (eq_ady.proj_pair_left p p')
+
+| proj_pair_right {S A} {t1 t2 u1 u2 : Term}
+    (p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))
+    (p': [0, 1] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))
+           ) :
+  SubProofEqEq p (eq_ady.proj_pair_right p p')
+
+| proj_enc_term  {S A} {k1 k2 : Key} {t1 t2 : Term}
+    (p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))) 
+    (p': [0, 0] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2)))
+           ) 
+  : SubProofEqEq p (eq_ady.proj_enc_term p p')
+
+| proj_enc_key {S A} {k1 k2 : Key} {t1 t2 : Term}
+    (p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2)))
+    (p': [0, 1] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2)))
+           )
+  : SubProofEqEq p (eq_ady.proj_enc_key p p')
+                 
+| subst_eq {S A} {t u : Term} {l : List Term}
+    (pmem: eq_ady S A (Assertion.member t l))
+    (peq: eq_ady S A (Assertion.eq t u))
+  : SubProofEqEq peq (eq_ady.subst pmem peq)
+
+| subst_mem  {S A} {t u : Term} {l : List Term}
+    (pmem: eq_ady S A (Assertion.member t l))
+    (peq: eq_ady S A (Assertion.eq t u))
+  : SubProofEqEq pmem (eq_ady.subst pmem peq)
+
+| prom {S A} {t n : Term}
+    (p: eq_ady S A (Assertion.member t [n]))
+  : SubProofEqEq p (eq_ady.prom p)
+
+| int {S A} {a: Assertion} {t: Term} {l: List Term}
+    {pl: Eq_Int S A t l}
+    {pa: eq_ady S A a}
+    (subp: SubProofEqInt pa pl)
+  : SubProofEqEq pa (eq_ady.int pl)    
+
+| wk {S A} {t n : Term} {nlist : List Term}
+    (p: eq_ady S A (Assertion.eq t n))
+    (p':  n ∈ nlist)
+    (p'l: Eq_Wk S nlist)
+  : SubProofEqEq p (eq_ady.wk p p' p'l)
 
 
-def foldrEqTransList {X: Type} {S: TermSet} {A: AssertionSet} {t1: Term} {tn: Term} (f: forall (S': TermSet) (A': AssertionSet) (t1: Term) (t2: Term), eq_ady S' A' (Assertion.eq t1 t2) -> X -> X) (fuel: Eq_Trans S A t1 tn) (ember: X) : X :=
-  match fuel with
-  | @Eq_Trans.two_trans _ A t1 t2 t3 p1 p2 => f S A t1 t2 p1 (f S A t2 t3 p2 ember)
-  | @Eq_Trans.trans_trans _ A t1 tk tk' phead plist => f S A t1 tk phead (foldrEqTransList f plist ember)
+
+| cons_pair_left_step {S A} {t1 t2 u1 u2: Term} {p1: eq_ady S A (Assertion.eq t1 u1)} {p2: eq_ady S A (Assertion.eq t2 u2)} {p} (subp: SubProofEqEq p p1): SubProofEqEq p (eq_ady.cons_pair p1 p2)
+| cons_pair_right_step {S A} {t1 t2 u1 u2: Term} {p1: eq_ady S A (Assertion.eq t1 u1)} {p2: eq_ady S A (Assertion.eq t2 u2)} {p} (subp: SubProofEqEq p p2): SubProofEqEq p (eq_ady.cons_pair p1 p2)
+
+
+| cons_enc_term_step {S A} {t1 t2 : Term} {k1 k2 : Key}
+    {p1:eq_ady S A (Assertion.eq t1 t2)}
+    {p2: eq_ady S A (Assertion.eq ((Term.key k1 )) (Term.key k2))}
+       {p} (subp: SubProofEqEq p p1)
+  : SubProofEqEq p (eq_ady.cons_enc p1 p2)
+
+| cons_enc_key_step {S A} {t1 t2 : Term} {k1 k2 : Key}
+    {p1:eq_ady S A (Assertion.eq t1 t2)}
+    {p2: eq_ady S A (Assertion.eq ((Term.key k1 )) (Term.key k2))}
+       {p} (subp: SubProofEqEq p p2)
+  : SubProofEqEq p (eq_ady.cons_enc p1 p2)
+
+
+| sym_step {S A} {t u: Term}
+    {p': eq_ady S A (Assertion.eq t u)}
+    {p} (subp: SubProofEqEq p p')
+  : SubProofEqEq p (eq_ady.sym p')
+
+| proj_pair_left_step {S A} {t1 t2 u1 u2 : Term}
+    {p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))}
+    {p': [0,0] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))
+           }
+   {ps} (subp: SubProofEqEq ps p)       
+  : SubProofEqEq ps (eq_ady.proj_pair_left p p')
+
+
+| proj_pair_right_step {S A} {t1 t2 u1 u2 : Term}
+    {p: eq_ady S A (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2))}
+    {p': [0,1] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.pair t1 t2) (Term.pair u1 u2)))
+           }
+   {ps} (subp: SubProofEqEq ps p)       
+  : SubProofEqEq ps (eq_ady.proj_pair_right p p')
+
+
+| proj_enc_term_step  {S A} {k1 k2 : Key} {t1 t2 : Term}
+    {p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))}
+    {p': [0, 0] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2)))
+           }
+    {ps} (subp: SubProofEqEq ps p) 
+  : SubProofEqEq ps (eq_ady.proj_enc_term p p')
+
+| proj_enc_key_step  {S A} {k1 k2 : Key} {t1 t2 : Term}
+    {p: eq_ady S A (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2))}
+    {p': [0, 1] ∈
+           (AbstractablePositionSetAssertion S
+              (Assertion.eq (Term.enc t1 k1) (Term.enc t2 k2)))
+           }
+    {ps} (subp: SubProofEqEq ps p) 
+  : SubProofEqEq ps (eq_ady.proj_enc_key p p')
+                 
+| subst_eq_step {S A} {t u : Term} {l : List Term}
+    {pmem: eq_ady S A (Assertion.member t l)}
+    {peq: eq_ady S A (Assertion.eq t u)}
+    {ps} (subp: SubProofEqEq ps peq) 
+  : SubProofEqEq ps (eq_ady.subst pmem peq)
+
+| subst_mem_step {S A} {t u : Term} {l : List Term}
+    {pmem: eq_ady S A (Assertion.member t l)}
+    {peq: eq_ady S A (Assertion.eq t u)}
+    {ps} (subp: SubProofEqEq ps pmem) 
+  : SubProofEqEq ps (eq_ady.subst pmem peq)
+
+| prom_step {S A} {t n : Term}
+    {p: eq_ady S A (Assertion.member t [n])}
+    {ps} (subp: SubProofEqEq ps p) 
+  : SubProofEqEq ps (eq_ady.prom p)  
+
+| wk_step {S A} {t n : Term} {nlist : List Term}
+    {p: eq_ady S A (Assertion.eq t n)}
+    {p':  n ∈ nlist}
+    {p'l: Eq_Wk S nlist}
+    {ps} (subp: SubProofEqEq ps p)
+  : SubProofEqEq ps (eq_ady.wk p p' p'l)
+
+inductive SubProofEqTrans: ∀ {S A} {a: Assertion} {t1 tn : Term}, eq_ady S A a -> Eq_Trans S A t1 tn -> Prop
+| two_trans_left {S A} {a: Assertion} {t1 t2 t3 : Term}
+    (p1: eq_ady S A (Assertion.eq t1 t2))
+    (p2: eq_ady S A (Assertion.eq t2 t3))
+    {pa: eq_ady S A a}
+    (psub: SubProofEqEq pa p1)
+  : SubProofEqTrans pa (Eq_Trans.two_trans p1 p2)
+                    
+| two_trans_right {S A} {a: Assertion} {t1 t2 t3 : Term}
+    (p1: eq_ady S A (Assertion.eq t1 t2))
+    (p2: eq_ady S A (Assertion.eq t2 t3))
+    {pa: eq_ady S A a}
+    (psub: SubProofEqEq pa p2)
+  : SubProofEqTrans pa (Eq_Trans.two_trans p1 p2)
+
+| trans_trans_head {S A} {a: Assertion} {t1 tk tk' : Term}
+    (phead: eq_ady S A (Assertion.eq t1 tk))
+    (ptail: Eq_Trans S A tk tk')
+    {pa: eq_ady S A a}
+    (psub: SubProofEqEq pa phead)
+  : SubProofEqTrans pa (Eq_Trans.trans_trans phead ptail)
+
+| trans_trans_tail {S A} {a: Assertion} {t1 tk tk' : Term}
+    (phead: eq_ady S A (Assertion.eq t1 tk))
+    (ptail: Eq_Trans S A tk tk')
+    {pa: eq_ady S A a}
+    (psub: SubProofEqTrans pa ptail)
+  : SubProofEqTrans pa (Eq_Trans.trans_trans phead ptail)
+
+inductive SubProofEqInt : ∀ {S: TermSet} {A: AssertionSet} {a: Assertion} {t: Term} {tl: List Term}, eq_ady S A a -> Eq_Int S A t tl -> Prop
+| two_lists_left {S A} {a: Assertion} {t : Term} {l1 l2: List Term}
+    (p1: eq_ady S A (Assertion.member t l1))
+    (p2: eq_ady S A (Assertion.member t l2))
+    {pa: eq_ady S A a}
+    (subp: SubProofEqEq pa p1)
+  : SubProofEqInt pa (Eq_Int.two_lists p1 p2)
+| two_lists_right {S A} {a: Assertion} {t : Term} {l1 l2 : List Term}
+    (p1: eq_ady S A (Assertion.member t l1))
+    (p2: eq_ady S A (Assertion.member t l2))
+    {pa: eq_ady S A a}
+    (subp: SubProofEqEq pa p2)
+  : SubProofEqInt pa (Eq_Int.two_lists p1 p2)
+
+| new_list_head {S A} {a: Assertion} {t : Term} {l1 intersect : List Term}
+    (phead: eq_ady S A (Assertion.member t l1))
+    (ptail: Eq_Int S A t intersect)
+    {pa: eq_ady S A a}
+    (subp: SubProofEqEq pa phead)
+  : SubProofEqInt pa (Eq_Int.new_list phead ptail)
+
+| new_list_tail {S A} {a: Assertion} {t : Term} {l1 intersect  : List Term}
+    (phead: eq_ady S A (Assertion.member t l1))
+    (ptail: Eq_Int S A t intersect)
+    {pa: eq_ady S A a}
+    (subp: SubProofEqInt pa ptail)
+  : SubProofEqInt pa (Eq_Int.new_list phead ptail)
+end
+
+
+def EqAdyProofTermSet {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a) : Set Term :=
+{t | ∃  (a': Assertion) (p': eq_ady S A a'), SubProofEqEq p' p ∧ AssertionMaximalSubTerm a' t}
+
+def AssertionSetTermListSet (A: AssertionSet) : Set (List Term) :=
+  {l |  ∃ (t: Term),  (Assertion.member t l) ∈ A} 
+
+def ProofTermListSet {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a) : Set (List Term) :=
+    {l| ∃ (t: Term) (p': eq_ady S A (Assertion.member t l)), SubProofEqEq p' p}
+
+def TermSetTermListSet (S: TermSet): Set (List Term) :=
+  {[t] | t ∈ S}
+
+def Substitution := ∀ (v: Var), match v with | Var.term .. => Term | Var.key .. => Key
+
+def isEmpty {X: Type} (S: Set  X) := ∀ x, (x ∈ S → False)
+
+def ConcreteSubstitution (s: Substitution) :=
+  forall (v: Var),
+    match v with
+    | Var.term v => isEmpty (FVSetTerm (s (Var.term v))) 
+    | Var.key v => isEmpty (FVSetTerm (Term.key (s (Var.key v))))
+    
+def substkey (s: Substitution) (k: Key) : Key :=
+  match k with
+  | Key.var v => s (Var.key v)
+  | _ => k
+
+def apply_substition (s: Substitution) (t: Term) : Term:=
+  match t with
+  | Term.var v => s (Var.term v)
+  | Term.name m => Term.name m
+  | Term.key k => Term.key (substkey s k)
+  | Term.pair t1 t2 => Term.pair (apply_substition s t1) (apply_substition s t2)
+  | Term.enc t k => Term.enc (apply_substition s t) (substkey s k)
   
 
+def Consistent (S: TermSet) (A: AssertionSet) :=
+   ∃ (s: Substitution),
+    ConcreteSubstitution s ->
+      ((∀ t1 t2, eq_ady S A (Assertion.eq t1 t2) -> (apply_substition s t1) = (apply_substition s t2)) ∧
+      (∀ t tlist, eq_ady S A (Assertion.member t tlist) ->  (apply_substition s t) ∈ tlist))
 
 
+abbrev EqAdyNormalisation := ∀ {S: TermSet} {A: AssertionSet} {a: Assertion} (_: eq_ady S A a),
+    Consistent S A -> ∃ (p': eq_ady S A a), isNormalEqAdy p' = true
 
--- noncomputable def containsCons {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): Bool :=
---   match proof with
---   | eq_ady.ax .. => false
---   | eq_ady.eq .. => false
---   | eq_ady.cons_pair .. => true
---   | eq_ady.cons_enc .. => true
---   | eq_ady.sym p => containsCons p
---   | eq_ady.trans plist =>
---                     by
---                     apply @Eq_Trans.rec _ _ (fun _ _ => Bool) (fun _ _ _ => Bool)
---                     case ax => {
-                    
-                    
-                         
-                 -- by
-                 -- induction plist with
-                 -- | Eq_Trans.two_trans p1 p2 => apply containsCons p1 || containsCons p2
-                 -- | Eq_Trans.trans_trans p plist => sorry
+abbrev EqAdySubTerm := ∀ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a),
+    Consistent S A ->
+    isNormalEqAdy p = true ->
+    let Y :=  SubTermSet S ∪ AssertionSetSubTermSet (A ∪ {a});
+     EqAdyProofTermSet p ⊆  Y ∧  
+     ProofTermListSet p ⊆ AssertionSetTermListSet (A ∪ {a}) ∪ TermSetTermListSet Y
+
+theorem normality : EqAdyNormalisation :=
+  by
+    unfold EqAdyNormalisation
+    intros S A a x cons
+    sorry
