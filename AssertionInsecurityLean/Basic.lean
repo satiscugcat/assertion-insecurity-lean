@@ -1287,8 +1287,17 @@ abbrev EqAdySubTerm := ∀ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_
      EqAdyProofTermSet p ⊆  Y ∧  
      ProofTermListSet p ⊆ AssertionSetTermListSet (A ∪ {a}) ∪ TermSetTermListSet Y
 
-theorem normality : EqAdyNormalisation :=
-  by
-    unfold EqAdyNormalisation
-    intros S A a x cons
-    sorry
+/-
+  motive_2 := fun {A t1 tn} (_: Eq_Trans S A t1 tn), Consistent S A → ∃ (tlist:Eq_Trans S A t1 tn ), isNormalEqTrans tlist && adjacentSafe tlist && !(containsReflexiveTrans tlist) = true
+  motive_3 := fun {A t tl} (_: Eq_Int S A t tl) => ∃ (premises: Eq_Int S A t tl), Consistent S A → isNormalEqInt premises = true
+  motive_4 := fun {tl} (_: Eq_Wk S tl) => ∃ (dylist: Eq_Wk S tl), isNormalEqWk dylist = true
+-/
+
+theorem Normality: EqAdyNormalisation :=
+   by
+     unfold EqAdyNormalisation
+     intros S A a x cons
+     induction x using eq_ady.rec (motive_2 := fun {A t1 tn} (_: Eq_Trans S A t1 tn) => Consistent S A → ∃ (tlist:Eq_Trans S A t1 tn ), isNormalEqTrans tlist && adjacentSafe tlist && !(containsReflexiveTrans tlist) = true) (motive_3 := fun {A t tl} (_: Eq_Int S A t tl) => ∃ (premises: Eq_Int S A t tl), Consistent S A → isNormalEqInt premises = true) (motive_4 := fun {tl} (_: Eq_Wk S tl) => ∃ (dylist: Eq_Wk S tl), isNormalEqWk dylist = true) with
+     | _ => sorry
+    
+    
