@@ -1293,11 +1293,22 @@ abbrev EqAdySubTerm := ∀ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_
   motive_4 := fun {tl} (_: Eq_Wk S tl) => ∃ (dylist: Eq_Wk S tl), isNormalEqWk dylist = true
 -/
 
+
 theorem Normality: EqAdyNormalisation :=
    by
      unfold EqAdyNormalisation
      intros S A a x cons
-     induction x using eq_ady.rec (motive_2 := fun {A t1 tn} (_: Eq_Trans S A t1 tn) => Consistent S A → ∃ (tlist:Eq_Trans S A t1 tn ), isNormalEqTrans tlist && adjacentSafe tlist && !(containsReflexiveTrans tlist) = true) (motive_3 := fun {A t tl} (_: Eq_Int S A t tl) => ∃ (premises: Eq_Int S A t tl), Consistent S A → isNormalEqInt premises = true) (motive_4 := fun {tl} (_: Eq_Wk S tl) => ∃ (dylist: Eq_Wk S tl), isNormalEqWk dylist = true) with
+     induction x using eq_ady.rec (motive_2 := fun {A t1 tn} (_: Eq_Trans S A t1 tn) => Consistent S A → ∃ (tlist:Eq_Trans S A t1 tn ), isNormalEqTrans tlist && adjacentSafe tlist && !(containsReflexiveTrans tlist) = true) (motive_3 := fun {A t tl} (_: Eq_Int S A t tl) => ∃ (premises: Eq_Int S A t tl), Consistent S A → isNormalEqInt premises = true)  (motive_4 := fun {tl} (_: Eq_Wk S tl) => ∃ (dylist: Eq_Wk S tl), isNormalEqWk dylist = true) with
+     | ax proof =>
+       exists eq_ady.ax S proof 
+     | eq A' proof => 
+       -- I don't see how this can be proven without explicitly specifying an algorithm. Maybe we
+       -- add lemmas like "all dy proofs have one destructor" which may get the proof to go through
+       -- for this branch, but multiple other rewrite rules take a similar approach of "propagating"
+       -- the rule upwards, including R9 involving trans, which has a lot of conditions imposed on it.
+       sorry
+      
      | _ => sorry
+       
     
     
