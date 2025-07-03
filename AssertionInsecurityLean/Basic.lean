@@ -505,7 +505,7 @@ def isNormalDy {X: TermSet} {t: Term} (proof: dy X t): Bool :=
 def dyProofMeasure {X: TermSet} {t: Term} (proof: dy X t): Nat := 
       1 +
       match proof with
-      | dy.ax _ =>  1
+      | dy.ax _ =>  0
       | dy.pk kH =>  dyProofMeasure kH
       | dy.splitL splitH =>  dyProofMeasure splitH
       | dy.splitR splitH =>  dyProofMeasure splitH
@@ -714,22 +714,18 @@ theorem rewriterNormaliser: ∀ {X: TermSet} {t: Term} (p p': dy X t), RewriteBi
 
 inductive SubTerm: Term -> Term -> Prop
 | refl (t: Term) : SubTerm t t
-                                                                                  
+                                                                     
 | pair_left (t₁ t₂: Term) : SubTerm t₁ (Term.pair t₁ t₂)
 | pair_right (t₁ t₂: Term) : SubTerm t₂ (Term.pair t₁ t₂)
                                             
 | enc_term (t : Term) (k: Key) : SubTerm t (Term.enc t k)
 | enc_key (t: Term) (k: Key) : SubTerm (Term.key k) (Term.enc t k)
-
-| trans_pair_left {t₁ t₂: Term} {p: Term} (sub: SubTerm p t₁): SubTerm p (Term.pair t₁ t₂)
-| trans_pair_right {t₁ t₂: Term} {p: Term} (sub: SubTerm p t₂) : SubTerm p (Term.pair t₁ t₂)
-                                            
-| trans_enc_term {t : Term} {k: Key} {p: Term} (sub: SubTerm p t): SubTerm p (Term.enc t k)
-| trans_enc_key {t: Term} {k: Key} {p: Term} (sub: SubTerm p (Term.key k)): SubTerm p (Term.enc t k)
-
+| trans {t₁ t₂ t₃} (p₁: SubTerm t₁ t₂) (p₂: SubTerm t₂ t₃): SubTerm t₁ t₃     
+    
+@[simp]
 def SubTermSet (S: TermSet) : Set Term := {x | ∃ t, t ∈ S ∧ SubTerm x t}
 
-
+@[simp]
 def ProofTerms {X: TermSet} {t: Term} (p: dy X t) : TermSet :=
   match p with
   | @dy.ax _ t _ => {t}
@@ -742,17 +738,116 @@ def ProofTerms {X: TermSet} {t: Term} (p: dy X t) : TermSet :=
   | @dy.adec _ t' _ encH kH => {t'} ∪  (ProofTerms encH) ∪ (ProofTerms kH)
   | @dy.aenc _ t' k tH kH =>   {Term.enc t' (Key.pub k)} ∪  (ProofTerms tH) ∪ (ProofTerms kH)
 
--- theorem SubTermProperty: forall (X: TermSet) (t: Term) (p: dy X t), ((isNormalDy p) = true)
---                                                                        -> match p  with
---                                                                           | dy.pair _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
---                                                                           | dy.senc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
---                                                                           | dy.aenc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
---                                                                           | dy.pk _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
---                                                                           | _ => ProofTerms p ⊆ SubTermSet X
---                                                                           :=
---         by
---           sorry
-
+theorem SubTermProperty: forall (X: TermSet) (t: Term) (p: dy X t), ((isNormalDy p) = true)
+                                                                       -> match p  with
+                                                                          | dy.pair _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+                                                                          | dy.senc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+                                                                          | dy.aenc _ _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+                                                                          | dy.pk _ => ProofTerms p ⊆ SubTermSet (X ∪ {t})
+                                                                          | _ => ProofTerms p ⊆ SubTermSet X
+                                                                          :=
+        by
+          intros X _ p
+          induction p with
+          | @ax t inH => 
+            intros H
+            simp
+            exists t
+            apply And.intro inH
+            constructor
+          | @splitL t1 t2 splitH splitH_ih =>
+            simp
+            intros H
+            cases splitH with
+            | pair =>
+              simp [isNormalDy] at H
+            | splitL splitH =>
+              unfold isNormalDy at H
+              simp at H
+              specialize (splitH_ih H)
+              simp at splitH_ih
+              simp [insert, Set.insert]
+              simp [insert, Set.insert] at splitH_ih 
+              cases splitH_ih with
+              | intro left right =>
+              apply And.intro
+              {
+                cases left with
+                | intro w wH =>
+                exists w
+                cases wH with
+                | intro left right =>
+                apply And.intro left
+                apply SubTerm.trans (p₂:= right)
+                constructor     
+              }
+              {
+                apply And.intro left right
+              }
+            | splitR splitH =>
+              unfold isNormalDy at H
+              simp at H
+              specialize (splitH_ih H)
+              simp at splitH_ih
+              simp [insert, Set.insert]
+              simp [insert, Set.insert] at splitH_ih 
+              cases splitH_ih with
+              | intro left right =>
+              apply And.intro
+              {
+                cases left with
+                | intro w wH =>
+                exists w
+                cases wH with
+                | intro left right =>
+                apply And.intro left
+                apply SubTerm.trans (p₂:= right)
+                constructor     
+              }
+              {
+                apply And.intro left right
+              }
+            | sdec kH encH =>
+              unfold isNormalDy at H
+              simp at H
+              specialize (splitH_ih H)
+              simp at splitH_ih
+              simp [insert, Set.insert]
+              simp [insert, Set.insert] at splitH_ih
+              
+              cases splitH_ih with
+              | intro left right =>
+              cases left with
+              | intro leftleft leftright =>
+              apply And.intro
+              {
+                cases leftleft with
+                | intro w wH =>
+                exists w
+                cases wH with
+                | intro left right =>
+                apply And.intro left
+                apply SubTerm.trans (p₂:= right)
+                constructor     
+              }
+              {
+                intro a
+                intro H
+                
+                sorry
+              }
+                
+              
+                
+                
+            | _ => sorry
+            
+            
+            
+            
+            
+          | _ => sorry
+          
 
 inductive Assertion: Type
 | eq (t u: Term)
@@ -1003,6 +1098,100 @@ mutual
     | Eq_Wk.single p => isNormalDy p
     | Eq_Wk.new phead plist => isNormalDy phead && isNormalEqWk plist
 end
+
+mutual 
+def δ₁ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
+    match proof with
+    | eq_ady.ax .. => 0
+    | eq_ady.eq _ p => dyProofMeasure p
+    | eq_ady.cons_pair p1 p2 => δ₁ p1 + δ₁ p2
+    | eq_ady.cons_enc p1 p2 => δ₁ p1 + δ₁ p2
+    | eq_ady.sym p => δ₁ p
+    | eq_ady.trans plist => δ₁Trans plist
+    | eq_ady.proj_pair_left p _ => δ₁ p
+    | eq_ady.proj_pair_right p _ => δ₁ p
+    | eq_ady.proj_enc_key p _ => δ₁ p
+    | eq_ady.proj_enc_term p _ => δ₁ p
+    | eq_ady.subst p p' => δ₁ p + δ₁ p'
+    | eq_ady.prom p => δ₁ p
+    | eq_ady.int premises => δ₁Int premises
+    | eq_ady.wk eqa _ dylist => δ₁ eqa + δ₁Wk dylist
+  def δ₁Trans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
+    match plist with
+    | Eq_Trans.two_trans p1 p2 => δ₁ p1 + δ₁ p2 
+    | Eq_Trans.trans_trans phead plist => δ₁ phead + δ₁Trans plist
+  def δ₁Int {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
+    match premises with
+    | Eq_Int.two_lists x1 x2 => δ₁ x1 + δ₁ x2 
+    | Eq_Int.new_list xhead xlist => δ₁ xhead + δ₁Int xlist
+  def δ₁Wk {S: TermSet} {ts: List Term} (l: Eq_Wk S ts): ℕ :=
+    match l with
+    | Eq_Wk.single p => dyProofMeasure p
+    | Eq_Wk.new phead plist => dyProofMeasure phead + δ₁Wk plist
+end
+
+
+mutual 
+def δ₂ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
+    match proof with
+    | eq_ady.ax .. => 0
+    | eq_ady.eq _ p => 0
+    | eq_ady.cons_pair p1 p2 => 1 + δ₂ p1 + δ₂ p2
+    | eq_ady.cons_enc p1 p2 => 1 + δ₂ p1 + δ₂ p2
+    | eq_ady.sym p => δ₂ p
+    | eq_ady.trans plist => δ₂Trans plist
+    | eq_ady.proj_pair_left p _ => δ₂ p
+    | eq_ady.proj_pair_right p _ => δ₂ p
+    | eq_ady.proj_enc_key p _ => δ₂ p
+    | eq_ady.proj_enc_term p _ => δ₂ p
+    | eq_ady.subst p p' => δ₂ p + δ₂ p'
+    | eq_ady.prom p => δ₂ p
+    | eq_ady.int premises => δ₂Int premises
+    | eq_ady.wk eqa _ dylist => δ₂ eqa
+  def δ₂Trans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
+    match plist with
+    | Eq_Trans.two_trans p1 p2 => δ₂ p1 + δ₂ p2 
+    | Eq_Trans.trans_trans phead plist => δ₂ phead + δ₂Trans plist
+  def δ₂Int {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
+    match premises with
+    | Eq_Int.two_lists x1 x2 => δ₂ x1 + δ₂ x2 
+    | Eq_Int.new_list xhead xlist => δ₂ xhead + δ₂Int xlist
+end
+
+
+
+mutual 
+def δ₃ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
+    match proof with
+    | eq_ady.ax .. => 1
+    | eq_ady.eq _ p => 1
+    | eq_ady.cons_pair p1 p2 => 1 + δ₃ p1 + δ₃ p2
+    | eq_ady.cons_enc p1 p2 => 1 + δ₃ p1 + δ₃ p2
+    | eq_ady.sym p => 1 + δ₃ p
+    | eq_ady.trans plist => 1 + δ₃Trans plist
+    | eq_ady.proj_pair_left p _ => 1 +  δ₃ p
+    | eq_ady.proj_pair_right p _ => 1 + δ₃ p
+    | eq_ady.proj_enc_key p _ => 1 + δ₃ p
+    | eq_ady.proj_enc_term p _ => 1 + δ₃ p
+    | eq_ady.subst p p' => 1 + δ₃ p + δ₃ p'
+    | eq_ady.prom p => 1 + δ₃ p
+    | eq_ady.int premises => 1 + δ₃Int premises
+    | eq_ady.wk eqa _ dylist => 1 + δ₃ eqa
+  def δ₃Trans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
+    match plist with
+    | Eq_Trans.two_trans p1 p2 => 2 + δ₃ p1 + δ₃ p2 
+    | Eq_Trans.trans_trans phead plist => 1 + δ₃ phead + δ₃Trans plist
+  def δ₃Int {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
+    match premises with
+    | Eq_Int.two_lists x1 x2 => 2 + δ₃ x1 + δ₃ x2 
+    | Eq_Int.new_list xhead xlist => 1 +  δ₃ xhead + δ₃Int xlist
+end
+
+
+def δ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a): ℕ :=
+  δ₁ p + δ₂ p + δ₃ p
+
+
 mutual
 inductive SubProofEqEq: ∀ {S₁ S₂ A₁ A₂ a₁ a₂}, (eq_ady S₁ A₁ a₁) -> (eq_ady S₂ A₂ a₂) -> Prop
 | refl {S A a}
@@ -1293,7 +1482,108 @@ abbrev EqAdySubTerm := ∀ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_
   motive_4 := fun {tl} (_: Eq_Wk S tl) => ∃ (dylist: Eq_Wk S tl), isNormalEqWk dylist = true
 -/
 
+def transAppend {S: TermSet} {A: AssertionSet} {t1 t2 t3: Term} (l1: Eq_Trans S A t1 t2) (l2: Eq_Trans S A t2 t3) : Eq_Trans S A t1 t3 :=
+  match l1 with
+  | Eq_Trans.two_trans p1 p2 => Eq_Trans.trans_trans p1 (Eq_Trans.trans_trans p2 l2)
+  | Eq_Trans.trans_trans p plist => Eq_Trans.trans_trans p (transAppend plist l2)
 
+mutual
+def eqAdySymTransform {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a) : eq_ady S A a × Bool :=
+  match proof with
+  | eq_ady.ax S inH => (eq_ady.ax S inH, false)
+  | eq_ady.eq A dyp => (eq_ady.eq A dyp, false)
+  | eq_ady.cons_pair p1 p2 =>
+    let res1 := eqAdySymTransform p1;
+    if res1.snd 
+    then (eq_ady.cons_pair res1.fst p2 , true)
+    else let res2 := eqAdySymTransform p2;
+         (eq_ady.cons_pair p1 res2.fst, res2.snd)
+  | eq_ady.cons_enc p1 p2 =>
+    let res1 := eqAdySymTransform p1;
+    if res1.snd 
+    then (eq_ady.cons_enc res1.fst p2 , true)
+    else let res2 := eqAdySymTransform p2;
+         (eq_ady.cons_enc p1 res2.fst, res2.snd)
+  | eq_ady.sym p =>
+    match p with
+    | eq_ady.eq A p' => (eq_ady.eq A p', true)
+    | eq_ady.sym p' => (p', true)
+    | eq_ady.cons_pair p1 p2 => (eq_ady.cons_pair p1.sym p2.sym, true)
+    | eq_ady.cons_enc p1 p2 => (eq_ady.cons_enc p1.sym p2.sym, true)
+    | eq_ady.proj_pair_left  p pin => (eq_ady.proj_pair_left p.sym sorry, true)
+    | eq_ady.proj_pair_right  p pin => (eq_ady.proj_pair_right p.sym sorry, true)
+    | eq_ady.proj_enc_term  p pin => (eq_ady.proj_enc_term p.sym sorry, true)
+    | eq_ady.proj_enc_key  p pin => (eq_ady.proj_enc_key p.sym sorry, true)
+    | eq_ady.trans plist => (eq_ady.trans (propagateSym plist), true)
+    | x => let res := (eqAdySymTransform x);
+           (eq_ady.sym res.fst, res.snd)
+  | eq_ady.proj_pair_left p pin =>
+    let res := (eqAdySymTransform p);
+           (eq_ady.proj_pair_left res.fst pin, res.snd)
+  | eq_ady.proj_pair_right p pin =>
+    let res := (eqAdySymTransform p);
+           (eq_ady.proj_pair_right res.fst pin, res.snd)
+  | eq_ady.proj_enc_key p pin =>
+    let res := (eqAdySymTransform p);
+           (eq_ady.proj_enc_key res.fst pin, res.snd)
+  | eq_ady.proj_enc_term p pin =>
+    let res := (eqAdySymTransform p);
+           (eq_ady.proj_enc_term res.fst pin, res.snd)
+  | eq_ady.subst p1 p2 =>
+    let res1 := eqAdySymTransform p1;
+    if res1.snd 
+    then (eq_ady.subst res1.fst p2 , true)
+    else let res2 := eqAdySymTransform p2;
+         (eq_ady.subst p1 res2.fst, res2.snd)
+  | eq_ady.prom p =>
+    let res := (eqAdySymTransform p);
+           (eq_ady.prom res.fst, res.snd)
+  | eq_ady.wk p a1 a2 =>
+    let res := (eqAdySymTransform p);
+           (eq_ady.wk res.fst a1 a2, res.snd)
+  | eq_ady.trans plist => 
+    let reslist := transSymFold plist;
+    (eq_ady.trans reslist.fst, reslist.snd)
+  | eq_ady.int premises =>
+    let reslist := intSymFold premises;
+    (eq_ady.int reslist.fst, reslist.snd)
+
+def propagateSym {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Trans S A t1 tn) : Eq_Trans S A tn t1 :=
+  match plist with
+  | Eq_Trans.two_trans p1 p2 => Eq_Trans.two_trans (eq_ady.sym p2) (eq_ady.sym p1)
+  | Eq_Trans.trans_trans p plist =>
+                         match plist with
+                         | Eq_Trans.two_trans p1 p2 => Eq_Trans.trans_trans p2.sym (Eq_Trans.two_trans p1.sym p.sym)
+                         | Eq_Trans.trans_trans p' plist => transAppend (propagateSym plist) (Eq_Trans.two_trans p'.sym p.sym )
+def transSymFold {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Trans S A t1 tn) : Eq_Trans S A t1 tn × Bool :=
+  match plist with
+  | Eq_Trans.two_trans p1 p2 =>
+    let res1 := eqAdySymTransform p1;
+    if res1.snd 
+    then (Eq_Trans.two_trans res1.fst p2 , true)
+    else let res2 := eqAdySymTransform p2;
+         (Eq_Trans.two_trans p1 res2.fst, res2.snd)
+  | Eq_Trans.trans_trans p plist =>
+    let res := eqAdySymTransform p;
+    if res.snd
+    then (Eq_Trans.trans_trans res.fst plist, true)
+    else let reslist := transSymFold plist;
+         (Eq_Trans.trans_trans p reslist.fst, reslist.snd)
+def intSymFold {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : Eq_Int S A t tlist × Bool :=
+  match premises with
+  | Eq_Int.two_lists p1 p2 =>
+    let res1 := eqAdySymTransform p1;
+    if res1.snd 
+    then (Eq_Int.two_lists res1.fst p2 , true)
+    else let res2 := eqAdySymTransform p2;
+         (Eq_Int.two_lists p1 res2.fst, res2.snd)
+  | Eq_Int.new_list xhead xlist =>
+    let res := eqAdySymTransform xhead;
+    if res.snd
+    then (Eq_Int.new_list res.fst xlist, true)
+    else let reslist := intSymFold xlist;
+         (Eq_Int.new_list xhead reslist.fst, reslist.snd)
+end
 theorem Normality: EqAdyNormalisation :=
    by
      unfold EqAdyNormalisation
