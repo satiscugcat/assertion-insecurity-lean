@@ -32,7 +32,9 @@ inductive Term: Type
 | enc (t: Term) (k: Key)
 deriving DecidableEq
 
+   
 abbrev TermSet := Set Term
+
 def var_to_term (v: Var) : Term :=
   match v with
   | Var.term v => Term.var v
@@ -1099,7 +1101,8 @@ mutual
     | Eq_Wk.new phead plist => isNormalDy phead && isNormalEqWk plist
 end
 
-mutual 
+mutual
+@[simp] 
 def δ₁ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
     match proof with
     | eq_ady.ax .. => 0
@@ -1116,14 +1119,17 @@ def δ₁ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): �
     | eq_ady.prom p => δ₁ p
     | eq_ady.int premises => δ₁Int premises
     | eq_ady.wk eqa _ dylist => δ₁ eqa + δ₁Wk dylist
+@[simp]
   def δ₁Trans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
     match plist with
     | Eq_Trans.two_trans p1 p2 => δ₁ p1 + δ₁ p2 
     | Eq_Trans.trans_trans phead plist => δ₁ phead + δ₁Trans plist
+@[simp]
   def δ₁Int {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
     match premises with
     | Eq_Int.two_lists x1 x2 => δ₁ x1 + δ₁ x2 
     | Eq_Int.new_list xhead xlist => δ₁ xhead + δ₁Int xlist
+@[simp]
   def δ₁Wk {S: TermSet} {ts: List Term} (l: Eq_Wk S ts): ℕ :=
     match l with
     | Eq_Wk.single p => dyProofMeasure p
@@ -1131,7 +1137,8 @@ def δ₁ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): �
 end
 
 
-mutual 
+mutual
+@[simp] 
 def δ₂ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
     match proof with
     | eq_ady.ax .. => 0
@@ -1148,10 +1155,12 @@ def δ₂ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): �
     | eq_ady.prom p => δ₂ p
     | eq_ady.int premises => δ₂Int premises
     | eq_ady.wk eqa _ dylist => δ₂ eqa
+@[simp]
   def δ₂Trans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
     match plist with
     | Eq_Trans.two_trans p1 p2 => δ₂ p1 + δ₂ p2 
     | Eq_Trans.trans_trans phead plist => δ₂ phead + δ₂Trans plist
+@[simp]
   def δ₂Int {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
     match premises with
     | Eq_Int.two_lists x1 x2 => δ₂ x1 + δ₂ x2 
@@ -1161,6 +1170,7 @@ end
 
 
 mutual 
+@[simp]
 def δ₃ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
     match proof with
     | eq_ady.ax .. => 1
@@ -1177,19 +1187,22 @@ def δ₃ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): �
     | eq_ady.prom p => 1 + δ₃ p
     | eq_ady.int premises => 1 + δ₃Int premises
     | eq_ady.wk eqa _ dylist => 1 + δ₃ eqa
+@[simp]
   def δ₃Trans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
     match plist with
-    | Eq_Trans.two_trans p1 p2 => 2 + δ₃ p1 + δ₃ p2 
-    | Eq_Trans.trans_trans phead plist => 1 + δ₃ phead + δ₃Trans plist
+    | Eq_Trans.two_trans p1 p2 =>  δ₃ p1 + δ₃ p2 
+    | Eq_Trans.trans_trans phead plist =>  δ₃ phead + δ₃Trans plist
+@[simp]
   def δ₃Int {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
     match premises with
-    | Eq_Int.two_lists x1 x2 => 2 + δ₃ x1 + δ₃ x2 
-    | Eq_Int.new_list xhead xlist => 1 +  δ₃ xhead + δ₃Int xlist
+    | Eq_Int.two_lists x1 x2 =>  δ₃ x1 + δ₃ x2 
+    | Eq_Int.new_list xhead xlist =>   δ₃ xhead + δ₃Int xlist
 end
 
-
+@[simp]
 def δ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a): ℕ :=
   δ₁ p + δ₂ p + δ₃ p
+
 
 
 mutual
@@ -1584,6 +1597,205 @@ def intSymFold {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (prem
     else let reslist := intSymFold xlist;
          (Eq_Int.new_list xhead reslist.fst, reslist.snd)
 end
+
+
+mutual 
+@[simp]
+def δSym {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ℕ := 
+    match proof with
+    | eq_ady.ax .. => 0
+    | eq_ady.eq _ p => 0
+    | eq_ady.cons_pair p1 p2 =>  δSym p1 + δSym p2
+    | eq_ady.cons_enc p1 p2 =>  δSym p1 + δSym p2
+    | eq_ady.sym p =>  δSym p + δ₃ p
+    | eq_ady.trans plist =>  δSymTrans plist
+    | eq_ady.proj_pair_left p _ =>  δSym p
+    | eq_ady.proj_pair_right p _ =>  δSym p
+    | eq_ady.proj_enc_key p _ =>  δSym p
+    | eq_ady.proj_enc_term p _ =>  δSym p
+    | eq_ady.subst p p' =>  δSym p + δSym p'
+    | eq_ady.prom p =>  δSym p
+    | eq_ady.int premises =>  δSymInt premises
+    | eq_ady.wk eqa _ dylist =>  δSym eqa
+@[simp]
+  def δSymTrans  {S: TermSet} {A: AssertionSet} {t1 tk: Term} (plist: Eq_Trans S A t1 tk) : ℕ :=
+    match plist with
+    | Eq_Trans.two_trans p1 p2 =>  δSym p1 + δSym p2 
+    | Eq_Trans.trans_trans phead plist =>  δSym phead + δSymTrans plist
+@[simp]
+  def δSymInt {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : ℕ :=
+    match premises with
+    | Eq_Int.two_lists x1 x2 =>  δSym x1 + δSym x2 
+    | Eq_Int.new_list xhead xlist =>  δSym xhead + δSymInt xlist
+end
+
+
+
+lemma transAppendSym: ∀ {S: TermSet} {A: AssertionSet} {t1 t2 t3: Term} {l1: Eq_Trans S A t1 t2} {l2: Eq_Trans S A t2 t3}, δSymTrans (transAppend l1 l2) = δSymTrans l1 + δSymTrans l2 :=
+  by
+    intros S A t1 t2 t3 l1
+    induction l1 using Eq_Trans.rec (motive_1 := fun _ _ p => True) (motive_3 := fun _ _ _ _ => True) (motive_4 := fun _ _ => True)
+    case two_trans p1 p2 => 
+      intros l2
+      simp [transAppend]
+      omega
+      
+    case trans_trans phead plist _ plist_ih =>
+      intros l2
+      cases l2 with
+      | two_trans p1 p2 => 
+        simp [transAppend]
+        specialize @plist_ih (Eq_Trans.two_trans p1 p2)
+        rw [plist_ih]
+        simp
+        omega
+        
+      | trans_trans ph pl =>
+        simp [transAppend]
+        specialize @plist_ih (Eq_Trans.trans_trans ph pl)
+        rw [plist_ih]
+        simp
+        omega
+        
+      
+    all_goals (apply True.intro)
+
+
+lemma breakApart : ∀{S A t2 t3} (plist: Eq_Trans S A t2 t3) {t1} (phead: eq_ady S A (Assertion.eq t1 t2)) , δSymTrans (propagateSym (Eq_Trans.trans_trans phead plist)) = δ₃ phead + δSym phead + δSymTrans (propagateSym (plist))  :=
+  by
+    intros S A t2 t3 plist
+    induction plist using Eq_Trans.rec (motive_1 := fun _ _ p => True /- (eqAdySymTransform p).snd = Bool.true → δSym (eqAdySymTransform p).fst < δSym p-/ ) (motive_3 := fun _ _ _ _ => True) (motive_4 := fun _ _ => True)
+    case two_trans p1 p2 =>
+      intros t1 phead
+      simp [propagateSym]
+      omega
+      
+    case trans_trans phead' plist _ plist_ih =>
+      
+      intros t1' phead'
+      simp [propagateSym]
+      rw [transAppendSym]
+      rw [plist_ih]
+      simp
+      omega
+    all_goals (apply True.intro)
+    
+
+
+lemma transPropagate: ∀ {S A t1 tn } (p: Eq_Trans S A t1 tn), δSymTrans (propagateSym p) = δSymTrans p +  δ₃Trans p :=
+  
+  by
+    intros S A t1 tn p 
+    induction p using Eq_Trans.rec (motive_1 := fun _ _ p => True /- (eqAdySymTransform p).snd = Bool.true → δSym (eqAdySymTransform p).fst < δSym p-/ ) (motive_3 := fun _ _ _ _ => True) (motive_4 := fun _ _ => True)
+    
+    case two_trans p1 p2 =>
+      simp [propagateSym]
+      omega
+      
+    case trans_trans phead plist _ plist_ih =>
+      cases plist with
+      | two_trans =>
+        simp [propagateSym]
+        omega
+        
+      | trans_trans phead plist =>
+        simp
+        simp [propagateSym]
+        simp [propagateSym] at plist_ih
+        rw [transAppendSym]
+        simp [propagateSym]
+        rw [breakApart] at plist_ih
+        omega
+    all_goals (apply True.intro)
+    
+
+
+lemma eqAdySymTransformDecrease: ∀ {S A a} (p: eq_ady S A a), (eqAdySymTransform p).snd = Bool.true → δSym (eqAdySymTransform p).fst < δSym p  :=
+  by
+    
+    intros S A a p
+    induction p using eq_ady.rec (motive_3 := fun _ _ _ premises =>  (intSymFold premises).snd = true →  δSymInt (intSymFold premises).fst < δSymInt premises) (motive_2 := fun _ _ _ plist => (transSymFold plist).snd → δSymTrans (transSymFold plist).fst < δSymTrans plist) (motive_4 := fun _ _ => True) with
+    | ax => simp [eqAdySymTransform]
+    | eq => simp [eqAdySymTransform]
+    | cons_pair p1 p2 p1_ih p2_ih =>
+      intros h
+      unfold eqAdySymTransform at h
+      simp at h
+      unfold eqAdySymTransform
+      simp 
+      cases E : (eqAdySymTransform p1).2 with
+      | false =>
+        simp
+        rw [E] at h
+        simp at h
+        apply p2_ih
+        exact h
+        
+      | true =>
+        simp
+        rw [E] at h
+        simp at h
+        apply p1_ih
+        exact E
+    | cons_enc p1 p2 p1_ih p2_ih =>
+      intros h
+      unfold eqAdySymTransform at h
+      simp at h
+      unfold eqAdySymTransform
+      simp 
+      cases E : (eqAdySymTransform p1).2 with
+      | false =>
+        simp
+        rw [E] at h
+        simp at h
+        apply p2_ih
+        exact h
+        
+      | true =>
+        simp
+        rw [E] at h
+        simp at h
+        apply p1_ih
+        exact E
+    | sym p p_ih =>
+      intros h
+      cases p
+      any_goals (simp [eqAdySymTransform] <;> omega)
+      case ax inH =>
+        simp [eqAdySymTransform] at h
+      case trans p =>
+        unfold eqAdySymTransform
+        simp
+        rw [transPropagate]
+        omega
+      case prom proof =>
+        simp at p_ih
+        unfold eqAdySymTransform at h ; simp at h
+        specialize p_ih h
+        simp
+        unfold eqAdySymTransform ; simp
+        have this : δ₃ (eqAdySymTransform proof.prom).1 < 1 + δ₃ proof :=
+          by
+            simp [eqAdySymTransform]
+            sorry
+        sorry
+      -- | eq proof => 
+      --   simp [eqAdySymTransform]
+      -- | sym p' =>
+      --   simp [eqAdySymTransform]
+      --   omega
+      -- | cons_pair  
+        
+        
+      -- | _ => sorry
+      
+      
+      
+    | _ => sorry
+
+    
+
+
 theorem Normality: EqAdyNormalisation :=
    by
      unfold EqAdyNormalisation
