@@ -1199,9 +1199,7 @@ def δ₃ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): �
     | Eq_Int.new_list xhead xlist =>   δ₃ xhead + δ₃Int xlist
 end
 
-@[simp]
-def δ {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a): ℕ :=
-  δ₁ p + δ₂ p + δ₃ p
+
 
 
 
@@ -1779,20 +1777,113 @@ lemma eqAdySymTransformDecrease: ∀ {S A a} (p: eq_ady S A a), (eqAdySymTransfo
             simp [eqAdySymTransform]
             sorry
         sorry
-      -- | eq proof => 
-      --   simp [eqAdySymTransform]
-      -- | sym p' =>
-      --   simp [eqAdySymTransform]
-      --   omega
-      -- | cons_pair  
+    | trans plist p_ih =>
+      intros h
+      simp [eqAdySymTransform] at h
+      specialize p_ih h
+      simp [eqAdySymTransform]
+      exact p_ih
+    | proj_pair_left p _ p_ih =>
+      simp [eqAdySymTransform]
+      intros h; specialize p_ih h
+      exact p_ih
+    | proj_pair_right p _ p_ih =>
+      simp [eqAdySymTransform]
+      intros h; specialize p_ih h
+      exact p_ih
+    | proj_enc_term p _ p_ih =>
+      simp [eqAdySymTransform]
+      intros h; specialize p_ih h
+      exact p_ih
+    | proj_enc_key p _ p_ih =>
+      simp [eqAdySymTransform]
+      intros h; specialize p_ih h
+      exact p_ih
+    | subst proofMember proofEq proofMember_ih proofEq_ih =>
+      simp [eqAdySymTransform]
+      cases eqn: (eqAdySymTransform proofMember).2 with
+      | true =>
+        simp
+        specialize (proofMember_ih eqn)
+        exact proofMember_ih
+      | false =>
+        simp
+        intros h; specialize proofEq_ih h
+        exact proofEq_ih
+    | prom p p_ih =>
+      simp [eqAdySymTransform]
+      intros h; specialize p_ih h
+      exact p_ih
+      
+    | int premises premises_ih =>
+      simp [eqAdySymTransform]
+      intros h; specialize premises_ih h
+      exact premises_ih
+    | wk proofEq _ _ proofEq_ih _ =>
+      simp [eqAdySymTransform]
+      intros h; specialize proofEq_ih h
+      exact proofEq_ih
+      
+      
+    | two_trans p1 p2 p1_ih p2_ih h =>
+      revert h
+      simp [transSymFold] 
+      cases eqn: (eqAdySymTransform p1).2 with
+      | true =>
+        specialize p1_ih eqn
+        simp
+        assumption
         
+      | false =>
+        simp
+        intros h; specialize p2_ih h
+        assumption
+    | trans_trans phead plist phead_ih plist_ih h =>
+      revert h
+      simp [eqAdySymTransform, transSymFold]
+      cases eqn:(eqAdySymTransform phead).2 with
+      | true =>
+        simp
+        exact phead_ih eqn
         
-      -- | _ => sorry
+      | false =>
+        simp
+        intros h; exact plist_ih h
+    | new_list proof1 proof2 proof1_ih proof2_ih h =>
+      revert h
+      simp [eqAdySymTransform, intSymFold]
+      cases eqn: (eqAdySymTransform proof1).2 with
+      | true =>
+        simp
+        exact proof1_ih eqn
+        
+      | false =>
+        simp
+        intros h; exact proof2_ih h
+    | two_lists phead plist phead_ih plist_ih h =>
+      revert h
+      simp [eqAdySymTransform, intSymFold]
+      cases eqn: (eqAdySymTransform phead).2 with
+      | true =>
+        simp
+        exact phead_ih eqn
+        
+      | false =>
+        simp
+        intros h; exact plist_ih h
+    | single => apply True.intro
       
+    | new => apply True.intro
       
-      
-    | _ => sorry
-
+def eqAdySymTransformer {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a) : eq_ady S A a :=
+  if (eqAdySymTransform proof).2 then eqAdySymTransformer (eqAdySymTransform proof).1 else proof
+  termination_by δSym proof
+  decreasing_by 
+  {
+    apply eqAdySymTransformDecrease
+    assumption
+  }
+  
     
 
 
