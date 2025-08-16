@@ -20,11 +20,12 @@
 *** TODO Proving Normalisation
 **** DONE Defining Rule Transformation Function for dy proofs
      CLOSED: [2025-05-19 Mon 09:18]
-**** TODO Proving its Correctness
+**** DONE Proving its Correctness
+     CLOSED: [2025-08-14 Thu 15:18]
 **** TODO Defining Rule Transformation Function for eq ady proofs
 **** TODO Proving its Correctness (/ proving correctness using it)
 *** TODO Proving Subterm Property
-* Daily Description of Work Done
+* Daily Description of Work Done (Old)
 ** April Week 2
    + 06/04/2025 - Implementing SubProof definitions
      * Managed to write down the definition for the subproof relation on \vert-_eq proofs.
@@ -45,3 +46,9 @@
    Rewrote the code to not use "foldEqAdyProof", as that was making the proof very complicated, will be trying to phase out all other general "fold"s too.
 
    Currently trying to write down the rule transformation function, since as far as I could understand, it is recursively called to transform the whole proof into an appropriate form. To do this I'm also trying to write and prove correct a function that does this for dy proofs.
+
+
+* Daily Description of Work Done (NEW)
+
+** Work done since switch to LEAN4
+   Due to the difficulty in writing functions operating on dependent types in Rocq, a decision was made to switch to LEAN4. All of the work that was done in Rocq has been replicated, with proofs of normalisation for dy proofs complete. Currently, work is being done in defining the algorithm for eq ady proofs, and subsequently proving termination and then correctness. This has been done for rules R_2 to R_4. Currently there is some trouble with the int rules, but the trans rules have been defined.
