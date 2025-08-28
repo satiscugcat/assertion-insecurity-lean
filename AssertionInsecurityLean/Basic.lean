@@ -2197,7 +2197,21 @@ def projTrans {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a
     any_goals (simp at proj_proof)
     case proj_pair_left pin p =>
       match p with
-      | eq_ady.trans plist => sorry
+      | eq_ady.trans plist => 
+        have recursor {t1 u1 t2 u2: Term} : Eq_Trans S A (t1.pair t2) (u1.pair u2) ->  (Eq_Trans S A t1 u1) ⊕ (Eq_Trans S A (t1.pair t2) (u1.pair u2)) :=
+          by
+            intros p
+            cases p with
+            | two_trans p1 p2 => 
+              cases p1 with
+              | cons_pair a b =>
+                
+                sorry
+              | _ => sorry
+              
+            | trans_trans => sorry
+            
+        sorry
       | p => exact (eq_ady.proj_pair_left p pin, false)
       
     all_goals sorry
