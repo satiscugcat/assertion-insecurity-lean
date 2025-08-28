@@ -23,32 +23,28 @@
 **** DONE Proving its Correctness
      CLOSED: [2025-08-14 Thu 15:18]
 **** TODO Defining Rule Transformation Function for eq ady proofs
+***** DONE Defining the Sym transformation rules
+      CLOSED: [2025-08-28 Thu 12:06]
+***** DONE Proving termination of repeated application of Sym rules
+      CLOSED: [2025-08-28 Thu 12:07]
+***** TODO Defining Overall transformation
+      The first int rules have been defined (although with liberal use of ==sorry==), currently having trouble with R_9.
+      
+      The rule involves a lot of weird manipulation that is supposed to be generalised to all the proj rules, and there
+      are some complications involved. (For example: If we have the proof of the form proj_1 (trans \pi_1 (cons foo bar) \pi_2)), then
+      the resulting proof would have to be trans (proj_1 \pi_1) foo (proj_1 \pi_2). So its been a bit difficult to work out the type of
+      the recursive function such that it would handle corner cases like these.
+
+      The other doubt is with R_11. I do not see how its correct to just eliminate everything else in the int hypotheses. The
+      nature of the int rule means that the resulting membership assertion will involve a list that is necessarily smaller than
+      the list being used in the membership assertion of the wk.
+
+      I'm leaving int for now, but after cleaning out proj (since it also involves a trans rule), I think I'll be able to start
+      on termination and normalisation.
+      
+***** TODO Proving Termination
+      I have defined the measure and the partial ordering on it, and also formalised the theorem to be proven.
+      Because all of the rules have some funky business going on with them, writing out the induction motives needs some careful thought.
+      I will try to attempt the definition of the motives after being done with proj.
 **** TODO Proving its Correctness (/ proving correctness using it)
 *** TODO Proving Subterm Property
-* Daily Description of Work Done (Old)
-** April Week 2
-   + 06/04/2025 - Implementing SubProof definitions
-     * Managed to write down the definition for the subproof relation on \vert-_eq proofs.
-     * Entering a new line after this definition causes EMACS to lag, regardless of whether there is an ongoing coq process. The problem doesn't seem to occur if I include a dummy statement. But this is strange and I have no idea why this is happening. Thankfully there is a hacky workaround for now, since I don't want to switch from EMACS. It might help to modularise some of the definitions.
-   + 08-09/04/25 - Implementing the rest, mostly just straightforward work.
-** April Week 3
-  I've been sick and tired this week, mostly because of the change in weather, thus I haven't been able to work for the most part.
-  + 16-18/04/25 - Trying to formalise consistency, realised flaw in system while doing so. Currently the way I have defined terms with variables does not allow /names/ to be variables. Which is bad. I also realised the same is true with existentials. Currently thinking of how to resolve this. 
-** April Week 4
-   Rewrote the code to fix the issue with variables, redefined the way existentials were being used to match the paper (ie. not using a function, but an assertion directly).
-   A new type Key was added, and Var has been written to be a disjoint union of KeyVar and TermVar. Encryption terms now use "Keys", which can be either public, private, or variable.
-
-   Added a notion of a substitution being "Concrete" too, which essentially states that after a substitution, there should be no free variables left in the result of that substitution.
-
-   Lastly, consistency has been formalised.
-
-** May Week 2
-   Rewrote the code to not use "foldEqAdyProof", as that was making the proof very complicated, will be trying to phase out all other general "fold"s too.
-
-   Currently trying to write down the rule transformation function, since as far as I could understand, it is recursively called to transform the whole proof into an appropriate form. To do this I'm also trying to write and prove correct a function that does this for dy proofs.
-
-
-* Daily Description of Work Done (NEW)
-
-** Work done since switch to LEAN4
-   Due to the difficulty in writing functions operating on dependent types in Rocq, a decision was made to switch to LEAN4. All of the work that was done in Rocq has been replicated, with proofs of normalisation for dy proofs complete. Currently, work is being done in defining the algorithm for eq ady proofs, and subsequently proving termination and then correctness. This has been done for rules R_2 to R_4. Currently there is some trouble with the int rules, but the trans rules have been defined.
