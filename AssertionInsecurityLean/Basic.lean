@@ -1019,11 +1019,21 @@ inductive Eq_Wk: TermSet -> List Term -> Type
 | new {S: TermSet} {t: Term} {tlist: List Term} (proofNew: dy S t) (proofList: Eq_Wk S tlist): Eq_Wk S (t::tlist)
 end
 
-
+@[simp]
 def isCons {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a) : Bool :=
   match p with
   | eq_ady.cons_pair _ _ => Bool.true
   | eq_ady.cons_enc _ _ => Bool.true
+  | eq_ady.cons_pk _ => Bool.true
+  | _ => Bool.false
+@[simp]
+def isProj {S: TermSet} {A: AssertionSet} {a: Assertion} (p: eq_ady S A a) : Bool :=
+  match p with
+  | eq_ady.proj_pair_left .. => Bool.true
+  | eq_ady.proj_pair_right .. => Bool.true
+  | eq_ady.proj_enc_key .. => Bool.true
+  | eq_ady.proj_enc_term .. => Bool.true
+  | eq_ady.proj_pk .. => Bool.true
   | _ => Bool.false
 
 mutual
@@ -1503,8 +1513,31 @@ def transSnoc {S: TermSet} {A: AssertionSet} {t1 t2 t3: Term} (l1: Eq_Trans S A 
 
 def intAppend {S: TermSet} {A: AssertionSet} {t: Term} {tlist1 tlist2: List Term} (l1: Eq_Int S A t tlist1) (l2: Eq_Int S A t tlist2) : Eq_Int S A t (intersection tlist1 tlist2) := 
   match l1 with
-  | Eq_Int.two_lists p1 p2 => sorry -- Eq_Int.new_list p1 (Eq_Int.new_list p2 l2)
-  | _ => sorry
+  | Eq_Int.two_lists p1 p2 => 
+    by
+      rw [← intersection_assoc]
+      exact Eq_Int.new_list p1 (Eq_Int.new_list p2 l2)
+  | Eq_Int.new_list phead ptail =>
+    by
+      rw [← intersection_assoc]
+      exact Eq_Int.new_list phead (intAppend ptail l2)
+
+def intSnoc {S: TermSet} {A: AssertionSet} {t: Term} {tlist1 tlist2: List Term} (l1: Eq_Int S A t tlist1) (l2: eq_ady S A (Assertion.member t tlist2) ) : Eq_Int S A t (intersection tlist1 tlist2) := 
+  match l1 with
+  | Eq_Int.two_lists p1 p2 =>
+    by
+      rw [← intersection_assoc]
+      exact Eq_Int.new_list p1 (Eq_Int.two_lists p2 l2)
+      
+  | @Eq_Int.new_list _ _ _ l l' p plist => 
+    by
+      have : Eq_Int S A t (intersection l (intersection l' tlist2)) :=  
+        Eq_Int.new_list p 
+                        (by
+                          -- exact transSnoc plist l2
+                          sorry)
+      sorry
+
 mutual
 def eqAdySymTransform {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a) : eq_ady S A a × Bool :=
   match proof with
@@ -1797,11 +1830,8 @@ lemma eqAdySymTransformDecrease: ∀ {S A a} (p: eq_ady S A a), (eqAdySymTransfo
           by
             simp [eqAdySymTransform]
             sorry
+        
         sorry
-      -- case cons_pk proof =>
-      --   sorry
-      -- case proj_pk proof =>
-      --   sorry
     | trans plist p_ih =>
       intros h
       simp [eqAdySymTransform] at h
@@ -1988,6 +2018,8 @@ def eqAdyProofTransform {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq
     (eq_ady.trans res.1, res.2)
 
   | eq_ady.int premises =>
+    let res := intRemoveInt premises;
+    if res.2 then (eq_ady.int res.1, res.2) else
     let reslist := intProofFold premises;
     (eq_ady.int reslist.fst, reslist.snd)
 
@@ -2105,26 +2137,19 @@ def transProofFold {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Trans
 
 def intRemoveInt {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (plist: Eq_Int S A t tlist) : Eq_Int S A t tlist × Bool :=
   match plist with
-  | Eq_Int.two_lists p1 p2 => 
-    sorry
+  | Eq_Int.two_lists p1 p2 =>
+    match p1 with
+    | eq_ady.int premises => (intSnoc premises p2, true)
+    | _ =>
+      match p2 with
+      | eq_ady.int premises => (Eq_Int.new_list p1 premises, true)
+      | _ => (Eq_Int.two_lists p1 p2, false)
   | Eq_Int.new_list phead plist => 
-    sorry
-
--- def transRemoveTrans {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Trans S A t1 tn) : Eq_Trans S A t1 tn × Bool :=
---   match plist with
---   | Eq_Trans.two_trans p1 p2 => 
---     match p1 with
---     | eq_ady.trans premises => (transSnoc premises p2, true)
---     | _ =>
---       match p2 with
---       | eq_ady.trans premises => (Eq_Trans.trans_trans p1 premises, true)
---       | _ => (Eq_Trans.two_trans p1 p2, false)
---   | Eq_Trans.trans_trans phead plist => 
---     match phead with
---     | eq_ady.trans premises => (transAppend premises plist, true)
---     | _ =>
---       let res := transRemoveTrans plist;
---       (Eq_Trans.trans_trans phead res.1, res.2)
+    match phead with
+    | eq_ady.int premises => (intAppend premises plist, true)
+    | _ =>
+      let res := intRemoveInt plist;
+      (Eq_Int.new_list phead res.1, res.2)
 
 def intProofFold {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : Eq_Int S A t tlist × Bool :=
   match premises with
@@ -2140,9 +2165,60 @@ def intProofFold {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (pr
     then (Eq_Int.new_list res.fst xlist, true)
     else let reslist := intProofFold xlist;
          (Eq_Int.new_list xhead reslist.fst, reslist.snd)
+
+def projCollapse {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a) (proj_proof: isProj proof = true) : eq_ady S A a × Bool := 
+  by
+    cases proof
+    any_goals (simp at proj_proof)
+    case proj_pair_left pin p =>
+      match p with
+      | eq_ady.cons_pair p1 p2 => exact (p1, true)
+      | p => exact (eq_ady.proj_pair_left p pin, false)
+    case proj_pair_right pin p =>
+      match p with
+      | eq_ady.cons_pair p1 p2 => exact (p2, true)
+      | p => exact (eq_ady.proj_pair_right p pin, false)
+    case proj_enc_term pin p =>
+      match p with
+      | eq_ady.cons_enc p1 p2 => exact (p1, true)
+      | p => exact (eq_ady.proj_enc_term p pin, false)
+    case proj_enc_key pin p =>
+      match p with
+      | eq_ady.cons_enc p1 p2 => exact (p2, true)
+      | p => exact (eq_ady.proj_enc_key p pin, false)
+    case proj_pk pin p =>
+      match p with
+      | eq_ady.cons_pk p => exact (p, true)
+      | p => exact (eq_ady.proj_pk p pin, false)
+
+def projTrans {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a) (proj_proof: isProj proof = true) : eq_ady S A a × Bool :=
+  by
+    cases proof
+    any_goals (simp at proj_proof)
+    case proj_pair_left pin p =>
+      match p with
+      | eq_ady.trans plist => sorry
+      | p => exact (eq_ady.proj_pair_left p pin, false)
+      
+    all_goals sorry
 end
 
 
+def ProofMeasure := ℕ × ℕ × ℕ
+def δ {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a): ProofMeasure :=
+  (δ₁ proof, δ₂ proof, δ₃ proof)
+
+instance : LE ProofMeasure where
+  le := fun t1 t2 =>
+            (t1.1 ≤ t2.1) ∨ (t1.2.1 ≤ t2.2.1) ∨ (t1.2.2 ≤ t2.2.2)
+instance : LT ProofMeasure where
+  lt := fun t1 t2 =>
+            t1 ≤ t2 ∧ ¬(t1 = t2)
+
+theorem eqAdyProofTransformDecrease :  ∀ {S A a} (p: eq_ady S A a), (eqAdyProofTransform p).snd = Bool.true → δ (eqAdyProofTransform p).fst < δ p :=
+  by
+    intros S A a p t
+    sorry
 theorem Normality: EqAdyNormalisation :=
    by
      unfold EqAdyNormalisation
