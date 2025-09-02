@@ -28,19 +28,9 @@
 ***** DONE Proving termination of repeated application of Sym rules
       CLOSED: [2025-08-28 Thu 12:07]
 ***** TODO Defining Overall transformation
-      The first int rules have been defined (although with liberal use of ==sorry==), currently having trouble with R_9.
-      
-      The rule involves a lot of weird manipulation that is supposed to be generalised to all the proj rules, and there
-      are some complications involved. (For example: If we have the proof of the form proj_1 (trans \pi_1 (cons foo bar) \pi_2)), then
-      the resulting proof would have to be trans (proj_1 \pi_1) foo (proj_1 \pi_2). So its been a bit difficult to work out the type of
-      the recursive function such that it would handle corner cases like these.
 
-      The other doubt is with R_11. I do not see how its correct to just eliminate everything else in the int hypotheses. The
-      nature of the int rule means that the resulting membership assertion will involve a list that is necessarily smaller than
-      the list being used in the membership assertion of the wk.
 
-      I'm leaving int for now, but after cleaning out proj (since it also involves a trans rule), I think I'll be able to start
-      on termination and normalisation.
+      I have figured out the type that's needed for being able to do the transformation with proj, and I have defined a function "recursor" accordingly, which does this only for proj_pair_left. However, for some reason LEAN can't figure out that it's terminating, even though I call recursor exactly once on a structurally smaller argument.
       
 ***** TODO Proving Termination
       I have defined the measure and the partial ordering on it, and also formalised the theorem to be proven.
