@@ -3,6 +3,9 @@ import Mathlib
 inductive EX {A: Type} (P: A -> Type): Type
 | intro (w: A) (h: P w)
 
+inductive EQ {A: Type}: A -> A -> Type
+| refl (r: A) : EQ r r
+
 inductive TermVar
 | cons : Nat -> TermVar
 deriving DecidableEq
@@ -2223,58 +2226,114 @@ def projTrans {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a
       
     all_goals sorry
 
-def recursor {S A t1 u1 t2 u2} : Eq_Trans S A (t1.pair t2) (u1.pair u2) -> 
+def recursor {S A t u} : Eq_Trans S A t u -> 
         Option (
-          (EX fun x1 => EX fun x2 => 
-              eq_ady S A (Assertion.eq t1 x1) × (eq_ady S A (Assertion.eq (x1.pair x2) (u1.pair u2)))) ⊕  
-          (EX fun x1 => EX fun x2 => 
-              eq_ady S A (Assertion.eq (t1.pair t2) (x1.pair x2)) × eq_ady S A (Assertion.eq x1 u1)) ⊕ 
+          (EX fun t1  => EX fun x1 => EX fun x2 => 
+              eq_ady S A (Assertion.eq t1 x1) × (eq_ady S A (Assertion.eq (x1.pair x2) u)) × (EX fun t2 => EQ t (t1.pair t2))) ⊕  
+          (EX fun u1 => EX fun x1 => EX fun x2 => 
+              eq_ady S A (Assertion.eq t (x1.pair x2)) × eq_ady S A (Assertion.eq x1 u1) × (EX fun u2 => EQ u (u1.pair u2))) ⊕ 
           (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
-              eq_ady S A (Assertion.eq (t1.pair t2) (x1.pair x2)) × eq_ady S A (Assertion.eq x1 y1) × eq_ady S A (Assertion.eq (y1.pair y2) (u1.pair u2))) ⊕ 
-          (EX fun x1 => EX fun x2 => 
-              eq_ady S A (Assertion.eq t1 x1) ×  Eq_Trans S A (x1.pair x2) (u1.pair u2)) ⊕  
-          (EX fun x1 => EX fun x2 => 
-              Eq_Trans S A (t1.pair t2) (x1.pair x2) × eq_ady S A (Assertion.eq x1 u1)) ⊕ 
+              eq_ady S A (Assertion.eq t (x1.pair x2)) × eq_ady S A (Assertion.eq x1 y1) × eq_ady S A (Assertion.eq (y1.pair y2) u)) ⊕ 
+          (EX fun (t1: Term) =>  EX fun x1 => EX fun x2 => 
+              eq_ady S A (Assertion.eq t1 x1) ×  Eq_Trans S A (x1.pair x2) u × (EX fun t2 => EQ t (t1.pair t2))) ⊕  
+          (EX fun u1 => EX fun x1 => EX fun x2 => 
+              Eq_Trans S A t (x1.pair x2) × eq_ady S A (Assertion.eq x1 u1) × (EX fun u2 => EQ u (u1.pair u2))) ⊕ 
           (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
-              Eq_Trans S A (t1.pair t2) (x1.pair x2) × eq_ady S A (Assertion.eq x1 y1) × eq_ady S A (Assertion.eq (y1.pair y2) (u1.pair u2))) ⊕ 
+              Eq_Trans S A t (x1.pair x2) × eq_ady S A (Assertion.eq x1 y1) × eq_ady S A (Assertion.eq (y1.pair y2) u)) ⊕ 
           (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
-              eq_ady S A (Assertion.eq (t1.pair t2) (x1.pair x2)) × eq_ady S A (Assertion.eq x1 y1) ×  Eq_Trans S A (y1.pair y2) (u1.pair u2)) ⊕
+              eq_ady S A (Assertion.eq t (x1.pair x2)) × eq_ady S A (Assertion.eq x1 y1) ×  Eq_Trans S A (y1.pair y2) u) ⊕
           (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
-              Eq_Trans S A (t1.pair t2) (x1.pair x2) × eq_ady S A (Assertion.eq x1 y1) ×  Eq_Trans S A (y1.pair y2) (u1.pair u2))
+              Eq_Trans S A t (x1.pair x2) × eq_ady S A (Assertion.eq x1 y1) ×  Eq_Trans S A (y1.pair y2) u)
         ) :=
           by
             intros p
             cases p with
             | @two_trans _ _ x _ p1 p2 => 
               match p1 with
-              | @eq_ady.cons_pair _ _ _ _ x1 x2 a b =>
+              | @eq_ady.cons_pair _ _ t1 t2 x1 x2 a b =>
                 apply Option.some
                 apply Sum.inl
+                apply EX.intro t1
                 apply EX.intro x1
                 apply EX.intro x2
-                apply (a, p2)
+                apply (a, p2, 
+                by
+                  apply EX.intro t2
+                  apply EQ.refl
+                )
               | p1 =>
               match p2 with
-              | @eq_ady.cons_pair _ _ x1 x2 _ _ a b =>
+              | @eq_ady.cons_pair _ _ x1 x2 u1 u2 a b =>
                 apply Option.some; apply Sum.inr; apply Sum.inl
+                apply EX.intro u1
                 apply EX.intro x1
                 apply EX.intro x2
-                apply (p1, a)
+                apply (p1, a, by apply EX.intro u2; apply EQ.refl)
                 
               | _ => apply Option.none
               
             | trans_trans phead plist =>
+              have stuff := recursor plist; 
               match phead with
-              | @eq_ady.cons_pair _ _ _ _ x1 x2 a b =>
+              | @eq_ady.cons_pair _ _ t1 t2 x1 x2 a b =>
                 apply Option.some
                 apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                apply EX.intro t1
                 apply EX.intro x1
                 apply EX.intro x2
-                apply (a, plist)
+                apply (a, plist, by apply EX.intro t2; apply EQ.refl)
                 
               | phead =>
                 match (recursor plist) with
-                | _ => sorry
+                | Option.none => apply Option.none
+                | Option.some (Sum.inl p) =>
+                  rcases p with ⟨t1, x1, x2, p1, p2, t2, _, _⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                  apply EX.intro t1; apply EX.intro t2; apply EX.intro x1; apply EX.intro x2
+                  apply (phead, p1, p2)
+                  
+                | Option.some (Sum.inr (Sum.inl p)) => 
+                  rcases p with ⟨u1, x1, x2, p1, p2, ex_eq⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                  apply EX.intro u1; apply EX.intro x1; apply EX.intro x2
+                  
+                  apply (Eq_Trans.two_trans phead p1, p2, ex_eq)
+                | Option.some (Sum.inr (Sum.inr (Sum.inl p))) => 
+                  rcases p with ⟨x1, x2, y1, y2, p1, p2, p3⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                  apply EX.intro x1; apply EX.intro x2; apply EX.intro y1; apply EX.intro y2
+                  apply (Eq_Trans.two_trans phead p1, p2, p3)
+                  
+                | Option.some (Sum.inr (Sum.inr (Sum.inr (Sum.inl p)))) =>
+                  rcases p with ⟨t1, x1, x2, p1, p2, t2, _, _⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                  apply EX.intro t1; apply EX.intro t2; apply EX.intro x1; apply EX.intro x2
+                  apply (phead, p1, p2)
+                  
+                | Option.some (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inl p))))) =>
+                  rcases p with ⟨u1, x1, x2, p1, p2, ex_eq⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                  apply EX.intro u1; apply EX.intro x1; apply EX.intro x2
+                  apply (Eq_Trans.trans_trans phead p1, p2, ex_eq)
+                  
+                  
+                | Option.some (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inl p)))))) =>
+                  rcases p with ⟨x1, x2, y1, y2, p1, p2, p3⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                  apply EX.intro x1; apply EX.intro x2; apply EX.intro y1; apply EX.intro y2
+                  apply (Eq_Trans.trans_trans phead p1, p2, p3)
+                  
+                | Option.some (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inl p))))))) => 
+                  rcases p with ⟨x1, x2, y1, y2, p1, p2, p3⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr
+                  apply EX.intro x1; apply EX.intro x2; apply EX.intro y1; apply EX.intro y2
+                  apply (Eq_Trans.two_trans phead p1, p2, p3)
+                | Option.some (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inr (Sum.inr p))))))) => 
+                  rcases p with ⟨x1, x2, y1, y2, p1, p2, p3⟩
+                  apply Option.some; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inr
+                  apply EX.intro x1; apply EX.intro x2; apply EX.intro y1; apply EX.intro y2
+                  apply (Eq_Trans.trans_trans phead p1, p2, p3)
+              
 end
 
 
