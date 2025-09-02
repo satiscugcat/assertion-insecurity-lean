@@ -1,5 +1,8 @@
 import Mathlib
 
+inductive EX {A: Type} (P: A -> Type): Type
+| intro (w: A) (h: P w)
+
 inductive TermVar
 | cons : Nat -> TermVar
 deriving DecidableEq
@@ -16,6 +19,7 @@ inductive Var
 | term (t: TermVar) 
 | key (k:KeyVar)
 deriving DecidableEq
+
 
 
 inductive Key: Type
@@ -2151,6 +2155,22 @@ def intRemoveInt {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (pl
       let res := intRemoveInt plist;
       (Eq_Int.new_list phead res.1, res.2)
 
+def intWk {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (plist: Eq_Int S A t tlist) : eq_ady S A (Assertion.member t tlist) × Bool :=
+  match plist with
+  | Eq_Int.two_lists p1 p2 =>
+    match p1 with
+    | eq_ady.wk proofeq _ premises => sorry -- (intSnoc premises p2, true)
+    | _ =>
+      match p2 with
+      | eq_ady.int premises => sorry -- (Eq_Int.new_list p1 premises, true)
+      | _ => sorry -- (Eq_Int.two_lists p1 p2, false)
+  | Eq_Int.new_list phead plist => 
+    match phead with
+    | eq_ady.int premises => sorry --(intAppend premises plist, true)
+    | _ =>
+      let res := intRemoveInt plist;
+      sorry -- (Eq_Int.new_list phead res.1, res.2)
+
 def intProofFold {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (premises: Eq_Int S A t tlist) : Eq_Int S A t tlist × Bool :=
   match premises with
   | Eq_Int.two_lists p1 p2 =>
@@ -2197,24 +2217,64 @@ def projTrans {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a
     any_goals (simp at proj_proof)
     case proj_pair_left pin p =>
       match p with
-      | eq_ady.trans plist => 
-        have recursor {t1 u1 t2 u2: Term} : Eq_Trans S A (t1.pair t2) (u1.pair u2) ->  (Eq_Trans S A t1 u1) ⊕ (Eq_Trans S A (t1.pair t2) (u1.pair u2)) :=
-          by
-            intros p
-            cases p with
-            | two_trans p1 p2 => 
-              cases p1 with
-              | cons_pair a b =>
-                
-                sorry
-              | _ => sorry
-              
-            | trans_trans => sorry
-            
+      | eq_ady.trans plist =>    
         sorry
       | p => exact (eq_ady.proj_pair_left p pin, false)
       
     all_goals sorry
+
+def recursor {S A t1 u1 t2 u2} : Eq_Trans S A (t1.pair t2) (u1.pair u2) -> 
+        Option (
+          (EX fun x1 => EX fun x2 => 
+              eq_ady S A (Assertion.eq t1 x1) × (eq_ady S A (Assertion.eq (x1.pair x2) (u1.pair u2)))) ⊕  
+          (EX fun x1 => EX fun x2 => 
+              eq_ady S A (Assertion.eq (t1.pair t2) (x1.pair x2)) × eq_ady S A (Assertion.eq x1 u1)) ⊕ 
+          (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
+              eq_ady S A (Assertion.eq (t1.pair t2) (x1.pair x2)) × eq_ady S A (Assertion.eq x1 y1) × eq_ady S A (Assertion.eq (y1.pair y2) (u1.pair u2))) ⊕ 
+          (EX fun x1 => EX fun x2 => 
+              eq_ady S A (Assertion.eq t1 x1) ×  Eq_Trans S A (x1.pair x2) (u1.pair u2)) ⊕  
+          (EX fun x1 => EX fun x2 => 
+              Eq_Trans S A (t1.pair t2) (x1.pair x2) × eq_ady S A (Assertion.eq x1 u1)) ⊕ 
+          (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
+              Eq_Trans S A (t1.pair t2) (x1.pair x2) × eq_ady S A (Assertion.eq x1 y1) × eq_ady S A (Assertion.eq (y1.pair y2) (u1.pair u2))) ⊕ 
+          (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
+              eq_ady S A (Assertion.eq (t1.pair t2) (x1.pair x2)) × eq_ady S A (Assertion.eq x1 y1) ×  Eq_Trans S A (y1.pair y2) (u1.pair u2)) ⊕
+          (EX fun x1 => EX fun x2 => EX fun y1 => EX fun y2 => 
+              Eq_Trans S A (t1.pair t2) (x1.pair x2) × eq_ady S A (Assertion.eq x1 y1) ×  Eq_Trans S A (y1.pair y2) (u1.pair u2))
+        ) :=
+          by
+            intros p
+            cases p with
+            | @two_trans _ _ x _ p1 p2 => 
+              match p1 with
+              | @eq_ady.cons_pair _ _ _ _ x1 x2 a b =>
+                apply Option.some
+                apply Sum.inl
+                apply EX.intro x1
+                apply EX.intro x2
+                apply (a, p2)
+              | p1 =>
+              match p2 with
+              | @eq_ady.cons_pair _ _ x1 x2 _ _ a b =>
+                apply Option.some; apply Sum.inr; apply Sum.inl
+                apply EX.intro x1
+                apply EX.intro x2
+                apply (p1, a)
+                
+              | _ => apply Option.none
+              
+            | trans_trans phead plist =>
+              match phead with
+              | @eq_ady.cons_pair _ _ _ _ x1 x2 a b =>
+                apply Option.some
+                apply Sum.inr; apply Sum.inr; apply Sum.inr; apply Sum.inl
+                apply EX.intro x1
+                apply EX.intro x2
+                apply (a, plist)
+                
+              | phead =>
+                match (recursor plist) with
+                | _ => sorry
 end
 
 
