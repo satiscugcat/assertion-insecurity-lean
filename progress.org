@@ -30,7 +30,9 @@
 ***** TODO Defining Overall transformation
 
 
-      I have figured out the type that's needed for being able to do the transformation with proj, and I have defined a function "recursor" accordingly, which does this only for proj_pair_left. However, for some reason LEAN can't figure out that it's terminating, even though I call recursor exactly once on a structurally smaller argument.
+      I have figured out the type that's needed for being able to do the transformation with proj, and I have defined some "recursor" functions accordingly, which does this only for proj_pair_left. However, for some reason LEAN can't figure out that it's terminating, even though I call recursor exactly once on a structurally smaller argument.
+
+      Since I'm skipping transformations with Int for now, I'm going to move on with trying to do the termination proof.
       
 ***** TODO Proving Termination
       I have defined the measure and the partial ordering on it, and also formalised the theorem to be proven.
