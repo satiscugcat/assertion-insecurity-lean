@@ -452,38 +452,18 @@ noncomputable def TermMonotonicity (X Y: TermSet) : ∀   (t: Term), (dy X t) �
     | adec _ _ encH_iH kH_iH => exact dy.adec encH_iH kH_iH
     | aenc _ _ tH_ih kH_iH =>  exact dy.aenc tH_ih kH_iH
 
-
-inductive NormalProof: ∀ {X: TermSet} {t: Term}, dy X t → Prop
-| ax {X: TermSet} {t: Term} (inH:  t ∈ X) : NormalProof (dy.ax inH)
-| pk {X: TermSet} {k: Name} {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) 
-     : NormalProof (dy.pk kH)
-| pair {X: TermSet} {t1 t2: Term} {tH: dy X t1} {uH: dy X t2} 
-     (tN: NormalProof tH) (uN: NormalProof uH)
-     : NormalProof (dy.pair tH uH)
-| senc {X: TermSet} {t: Term} {k: Name} {tH: dy X t} {kH: dy X (Term.key (Key.priv k))} (tN: NormalProof tH) (kN: NormalProof kH): NormalProof (dy.senc tH kH)
-| aenc {X: TermSet} {t: Term} {k: Name} {tH: dy X t} {kH: dy X (Term.key (Key.pub k))} (tN: NormalProof tH) (kN: NormalProof kH): NormalProof (dy.aenc tH kH)
-
-| splitL_splitL {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair (Term.pair t₁ t₂) t₃)} (pN: NormalProof pH): NormalProof (dy.splitL (dy.splitL pH))
-| splitL_splitR {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair t₃ (Term.pair t₁ t₂))} (pN: NormalProof pH): NormalProof (dy.splitL (dy.splitR pH))
-| splitL_sdec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₁ t₂) (Key.priv k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitL (dy.sdec pH kH))
-| splitL_adec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₁ t₂) (Key.pub k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitL (dy.adec pH kH))
-
-| splitR_splitL {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair (Term.pair t₂ t₁) t₃)} (pN: NormalProof pH): NormalProof (dy.splitR (dy.splitL pH))
-| splitR_splitR {X: TermSet} {t₁ t₂ t₃: Term} {pH: dy X (Term.pair t₃ (Term.pair t₂ t₁))} (pN: NormalProof pH): NormalProof (dy.splitR (dy.splitR pH))
-| splitR_sdec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₂ t₁) (Key.priv k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitR (dy.sdec pH kH))
-| splitR_adec {X: TermSet} {t₁ t₂: Term} {k: Name} {kH: dy X (Term.key (Key.priv k))} {pH: dy X (Term.enc (Term.pair t₂ t₁) (Key.pub k))} (pN: NormalProof pH) (kN: NormalProof kH): NormalProof (dy.splitR (dy.adec pH kH))
-
-| sdec_splitL {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair (Term.enc t₁ (Key.priv k)) t₂)} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.sdec (dy.splitL pH) kH)
-| sdec_splitR {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair t₂ (Term.enc t₁ (Key.priv k)))} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.sdec (dy.splitR pH) kH)
-| sdec_sdec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.priv k₁)) (Key.priv k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.sdec (dy.sdec pH k₂H) k₁H)
-| sdec_adec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.priv k₁)) (Key.pub k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.sdec (dy.adec pH k₂H) k₁H)
-
-| adec_splitL {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair (Term.enc t₁ (Key.pub k)) t₂)} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.adec (dy.splitL pH) kH)
-| adec_splitR {X: TermSet} {t₁ t₂: Term} {k: Name} {pH: dy X (Term.pair t₂ (Term.enc t₁ (Key.pub k)))} (pN: NormalProof pH) {kH: dy X (Term.key (Key.priv k))} (kN: NormalProof kH) : NormalProof (dy.adec (dy.splitR pH) kH)
-| adec_sdec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.pub k₁)) (Key.priv k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.adec (dy.sdec pH k₂H) k₁H)
-| adec_adec {X: TermSet} {t: Term} {k₁ k₂: Name} {pH: dy X (Term.enc (Term.enc t (Key.pub k₁)) (Key.pub k₂))} {k₁H: dy X (Term.key (Key.priv k₁))} {k₂H: dy X (Term.key (Key.priv k₂))} (pN: NormalProof pH) (k₁N: NormalProof k₁H) (k₂N: NormalProof k₂H) : NormalProof (dy.adec (dy.adec pH k₂H) k₁H)
-
-
+def dyProofMeasure {X: TermSet} {t: Term} (proof: dy X t): Nat := 
+      1 +
+      match proof with
+      | dy.ax _ =>  0
+      | dy.pk kH =>  dyProofMeasure kH
+      | dy.splitL splitH =>  dyProofMeasure splitH
+      | dy.splitR splitH =>  dyProofMeasure splitH
+      | dy.pair tH uH =>  dyProofMeasure tH + dyProofMeasure uH
+      | dy.senc tH kH =>   dyProofMeasure tH + dyProofMeasure kH
+      | dy.aenc tH kH =>   dyProofMeasure tH + dyProofMeasure kH
+      | dy.sdec encH kH =>  dyProofMeasure encH + dyProofMeasure kH
+      | dy.adec encH kH =>  dyProofMeasure encH + dyProofMeasure kH
 
 
 
@@ -2408,6 +2388,7 @@ def eqAdyProofTransform {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq
     if res.2 then (eq_ady.int res.1, res.2) else
     let reslist := intProofFold premises;
     (eq_ady.int reslist.fst, reslist.snd)
+decreasing_by (all_goals sorry)
 def wkFold {S nlist}  (plist: Eq_Wk S nlist):  Eq_Wk S nlist :=
   by
     cases plist with
@@ -2429,7 +2410,7 @@ def transTransformer {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Tra
   if res.2 then res else
   let res := transProofFold plist;
   (eq_ady.trans res.1, res.2)
-  
+decreasing_by (all_goals sorry)
 def transRemoveRefl {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Trans S A t1 tn) : eq_ady S A (Assertion.eq t1 tn) × Bool :=
   match plist with
   | @Eq_Trans.two_trans S A t1 t2 t3 p1 p2 =>
@@ -2541,7 +2522,7 @@ def transProofFold {S: TermSet} {A: AssertionSet} {t1 tn: Term} (plist: Eq_Trans
     then (Eq_Trans.trans_trans res.fst plist, true)
     else let reslist := transProofFold plist;
          (Eq_Trans.trans_trans p reslist.fst, reslist.snd)
-
+decreasing_by (all_goals sorry)
 def intRemoveInt {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (plist: Eq_Int S A t tlist) : Eq_Int S A t tlist × Bool :=
   match plist with
   | Eq_Int.two_lists p1 p2 =>
@@ -2588,6 +2569,7 @@ def intProofFold {S: TermSet} {A: AssertionSet} {t: Term} {tlist: List Term} (pr
     then (Eq_Int.new_list res.fst xlist, true)
     else let reslist := intProofFold xlist;
          (Eq_Int.new_list xhead reslist.fst, reslist.snd)
+
 
 def projCollapse {S: TermSet} {A: AssertionSet} {a: Assertion} (proof: eq_ady S A a) (proj_proof: isProj proof = true) : eq_ady S A a × Bool := 
   by

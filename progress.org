@@ -33,10 +33,7 @@
       I have figured out the type that's needed for being able to do the transformation with proj, and I have defined some "recursor" functions accordingly, which does this only for proj_pair_left. However, for some reason LEAN can't figure out that it's terminating, even though I call recursor exactly once on a structurally smaller argument.
 
       Since I'm skipping transformations with Int for now, I'm going to move on with trying to do the termination proof.
-      
 ***** TODO Proving Termination
-      I have defined the measure and the partial ordering on it, and also formalised the theorem to be proven.
-      Because all of the rules have some funky business going on with them, writing out the induction motives needs some careful thought.
-      I will try to attempt the definition of the motives after being done with proj.
+      We are unable to do proofs involving eqAdyProofTransform until we get termination errors resolved.
 **** TODO Proving its Correctness (/ proving correctness using it)
 *** TODO Proving Subterm Property
