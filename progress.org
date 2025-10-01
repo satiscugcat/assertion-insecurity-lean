@@ -34,6 +34,6 @@
 
       Since I'm skipping transformations with Int for now, I'm going to move on with trying to do the termination proof.
 ***** TODO Proving Termination
-      We are unable to do proofs involving eqAdyProofTransform until we get termination errors resolved.
+      Unfold is not working on eqAdyProofTransform, I have no idea why. I feel like this might be related to the termination errors, but I'm not sure. (LEAN4 isn't able to prove termination for eqAdyProofTransform itself, which is strange).
 **** TODO Proving its Correctness (/ proving correctness using it)
 *** TODO Proving Subterm Property

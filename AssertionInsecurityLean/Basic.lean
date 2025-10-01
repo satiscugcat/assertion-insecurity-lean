@@ -2796,9 +2796,10 @@ theorem eqAdyProofTransformDecrease :  ∀ {S A a} (p: eq_ady S A a), (eqAdyProo
     intros S A a p t
     induction p using eq_ady.rec (motive_3 := fun _ _ _ premises => sorry) (motive_2 := fun _ _ _ plist => (transTransformer plist).snd → δ (eq_ady.trans (transSymFold plist).fst) < δ (eq_ady.trans plist)) (motive_4 := fun _ _ => True) with
     | ax =>
-      simp
+      
       
       unfold eqAdyProofTransform
+      simp
       sorry
     | _ => sorry
     -- induction p using eq_ady.rec (motive_3 := fun _ _ _ premises =>  (intSymFold premises).snd = true →  δSymInt (intSymFold premises).fst < δSymInt premises) (motive_2 := fun _ _ _ plist => (transSymFold plist).snd → δSymTrans (transSymFold plist).fst < δSymTrans plist) (motive_4 := fun _ _ => True) with
